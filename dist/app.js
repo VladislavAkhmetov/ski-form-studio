@@ -2,14 +2,16 @@ import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { TransformControls } from './vendor/TransformControls.js';
 import { defaults, createSki, createPole, replaceModel, setMaterial } from './model.js';
+import { GroundGuide } from './ground.js';
 
 const $=id=>document.getElementById(id);
 const svg=name=>`<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
 const DEG=Math.PI/180, STORE='ski-form-scene-v1', LIBRARY='ski-form-library-v1';
 const config={...defaults};
-const settings={ratio:'3:4',resolution:2048,background:'white',shadow:true,grid:false,material:'clay',light:100,focal:70,projection:'perspective'};
+const DEFAULT_SETTINGS=Object.freeze({ratio:'3:4',resolution:2048,background:'white',shadow:true,grid:false,material:'clay',light:100,focal:70,projection:'perspective',floorEnabled:false,floorExport:true,floorGrid:true,floorWidth:120,floorLength:240,floorY:-.5});
+const settings={...DEFAULT_SETTINGS};
 const state={selected:[],mode:'translate',space:'world',snap:false,label:'Параллельная раскладка',restoring:false};
-let renderer,scene,camera,orbit,gizmo,gizmoHelper,ground,grid,root,pivot,items=[],outlines=[],history=[],historyIndex=-1,saveTimer,toastTimer,animationFrame,exporting=false,storageAvailable=true,library=[],width=0,height=0;
+let renderer,scene,camera,orbit,gizmo,gizmoHelper,ground,groundGuide,grid,root,pivot,items=[],outlines=[],history=[],historyIndex=-1,saveTimer,toastTimer,animationFrame,exporting=false,storageAvailable=true,library=[],width=0,height=0;
 const itemNames=['Лыжа 01','Лыжа 02','Палка 01','Палка 02'];
 const PRESETS=[
  {id:'parallel',name:'Параллельно',label:'Параллельная раскладка',art:'M22 5v37M30 5v37M10 10v29M42 10v29',poses:[[-.055,0,0,0,0,0],[.055,0,0,0,0,0],[-.19,0,0,0,0,0],[.19,0,0,0,0,0]],view:'threequarter'},
@@ -45,6 +47,7 @@ function init(){
   const key=new THREE.DirectionalLight('#fff7ec',2);key.position.set(-1.5,3.5,-1.2);key.castShadow=true;key.shadow.mapSize.set(2048,2048);key.shadow.camera.left=-2.5;key.shadow.camera.right=2.5;key.shadow.camera.top=2.5;key.shadow.camera.bottom=-2.5;key.shadow.camera.near=.05;key.shadow.camera.far=10;key.shadow.normalBias=.003;key.shadow.bias=-.00012;key.shadow.radius=4;scene.add(key);
   const fill=new THREE.DirectionalLight('#eef4ff',.65);fill.position.set(2,1.5,1);scene.add(fill);
   ground=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.ShadowMaterial({opacity:.17,depthWrite:false}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+  groundGuide=new GroundGuide();scene.add(groundGuide);
   grid=new THREE.GridHelper(6,60,'#c2c9b5','#e0e5d7');grid.material.transparent=true;grid.material.opacity=.4;grid.visible=false;scene.add(grid);
   root=new THREE.Group();scene.add(root);pivot=new THREE.Group();root.add(pivot);
   for(let i=0;i<4;i++){const o=i<2?createSki(config):createPole(config,i===2?-1:1);o.userData={...o.userData,id:i,side:i===2?-1:1};root.add(o);items.push(o);}
@@ -70,7 +73,12 @@ function select(ids){
   updateObjectList();updateInspector();
 }
 function updateOutlines(){for(const l of outlines)l.update();}
-function updateGround(){root.updateMatrixWorld(true);const box=new THREE.Box3();for(const o of items)if(o.visible)box.union(new THREE.Box3().setFromObject(o));const y=box.isEmpty()?-.005:box.min.y-.003;ground.position.y=y;grid.position.y=y+.0002;ground.visible=settings.shadow;}
+function objectBounds(){root.updateMatrixWorld(true);const box=new THREE.Box3();for(const o of items)if(o.visible)box.union(new THREE.Box3().setFromObject(o));return box;}
+function updateGround(){
+  const box=objectBounds(),y=settings.floorEnabled?settings.floorY/100:box.isEmpty()?-.005:box.min.y-.003;
+  ground.position.y=y+(settings.floorEnabled?.00035:0);ground.scale.set(settings.floorEnabled?settings.floorWidth/20000:1,settings.floorEnabled?settings.floorLength/20000:1,1);
+  grid.position.y=y+.0002;ground.visible=settings.shadow;renderer.shadowMap.enabled=settings.shadow;groundGuide.update(settings);
+}
 function selectedObject(){return state.selected.length>1?pivot:state.selected.length===1?items[state.selected[0]]:null;}
 function updateInspector(){
   const count=state.selected.length,target=selectedObject();$('selectedName').textContent=count===0?'Нет выделения':count===1?itemNames[state.selected[0]]:`Группа предметов`;$('selectedCount').textContent=String(count).padStart(2,'0');$('transformFields').hidden=!count;$('emptySelection').hidden=!!count;
@@ -97,7 +105,7 @@ function applyPreset(id,save=true){
   updateGround();setView(preset.view,false);select(selected);if(save)record();
 }
 
-function visibleBounds(){root.updateMatrixWorld(true);const box=new THREE.Box3();for(const o of items)if(o.visible)box.union(new THREE.Box3().setFromObject(o));if(box.isEmpty())box.setFromCenterAndSize(new THREE.Vector3(),new THREE.Vector3(.4,.1,1.8));return box;}
+function visibleBounds(){const box=objectBounds();if(settings.floorEnabled){const w=settings.floorWidth/200,l=settings.floorLength/200,y=settings.floorY/100;box.expandByPoint(new THREE.Vector3(-w,y,-l));box.expandByPoint(new THREE.Vector3(w,y,l));}if(box.isEmpty())box.setFromCenterAndSize(new THREE.Vector3(),new THREE.Vector3(.4,.1,1.8));return box;}
 function fit(recordIt=true){
   orbit.update();const box=visibleBounds(),center=box.getCenter(new THREE.Vector3()),direction=camera.position.clone().sub(orbit.target).normalize();if(!direction.lengthSq())direction.set(0,1,-.001).normalize();
   camera.position.copy(center).add(direction);camera.lookAt(center);camera.updateMatrixWorld();
@@ -126,9 +134,10 @@ function resize(){
 function exportDimensions(){const [w,h]=settings.ratio.split(':').map(Number),max=settings.resolution;return w>=h?[max,Math.round(max*h/w)]:[Math.round(max*w/h),max];}
 function updateExportLabels(){const [w,h]=exportDimensions();$('canvasFormat').textContent=settings.ratio;$('renderSize').textContent=`${w} × ${h} px`;}
 function applySettings(){
-  setMaterial(settings.material);renderer.toneMappingExposure=.95*settings.light/100;scene.background=settings.background==='transparent'?null:new THREE.Color(settings.background==='gray'?'#eeeeeb':'#ffffff');$('artboard').classList.toggle('transparent',settings.background==='transparent');grid.visible=settings.grid;ground.visible=settings.shadow;
+  setMaterial(settings.material);renderer.toneMappingExposure=.95*settings.light/100;scene.background=settings.background==='transparent'?null:new THREE.Color(settings.background==='gray'?'#eeeeeb':'#ffffff');$('artboard').classList.toggle('transparent',settings.background==='transparent');grid.visible=settings.grid;updateGround();
   for(const [key,value]of Object.entries(config)){const el=$(key+'Input')||$(key);if(el){if(el.type==='checkbox')el.checked=value;else el.value=value;}if($(key+'Value'))$(key+'Value').textContent=`${value} см`;}
   $('shadowInput').checked=settings.shadow;$('lightInput').value=settings.light;$('lightValue').textContent=`${settings.light}%`;$('focalInput').value=settings.focal;$('focalValue').textContent=`${settings.focal} мм`;$('resolutionInput').value=settings.resolution;$('gridBtn').classList.toggle('active',settings.grid);
+  for(const k of ['floorEnabled','floorExport','floorGrid'])$(k).checked=settings[k];for(const k of ['floorWidth','floorLength','floorY'])$(k).value=settings[k];$('floorControls').hidden=!settings.floorEnabled;$('floorBtn').classList.toggle('active',settings.floorEnabled);
   active('ratioOptions','ratio',settings.ratio);active('backgroundOptions','bg',settings.background);active('materialOptions','material',settings.material);updateExportLabels();
 }
 function rebuild(){for(const o of items)replaceModel(o,config);setMaterial(settings.material);updateGround();updateOutlines();}
@@ -158,7 +167,15 @@ function bindUI(){
   $('materialOptions').onclick=e=>{const b=e.target.closest('[data-material]');if(!b)return;settings.material=b.dataset.material;setMaterial(settings.material);active('materialOptions','material',settings.material);record();};
   $('lightInput').oninput=e=>{settings.light=+e.target.value;renderer.toneMappingExposure=.95*settings.light/100;$('lightValue').textContent=settings.light+'%';};$('lightInput').onchange=record;
   $('focalInput').oninput=e=>{settings.focal=+e.target.value;$('focalValue').textContent=settings.focal+' мм';if(camera.isPerspectiveCamera){const oldFov=camera.fov;camera.setFocalLength(settings.focal);const target=orbit.target.clone(),dir=camera.position.clone().sub(target),newDist=dir.length()*Math.tan(oldFov*DEG/2)/Math.tan(camera.fov*DEG/2);camera.position.copy(target).add(dir.normalize().multiplyScalar(newDist));camera.updateProjectionMatrix();}};$('focalInput').onchange=record;
-  $('shadowInput').onchange=e=>{settings.shadow=e.target.checked;ground.visible=settings.shadow;record();};
+  $('shadowInput').onchange=e=>{settings.shadow=e.target.checked;updateGround();record();};
+  $('floorEnabled').onchange=e=>{settings.floorEnabled=e.target.checked;updateGround();$('floorControls').hidden=!settings.floorEnabled;$('floorBtn').classList.toggle('active',settings.floorEnabled);fit(false);record();};
+  $('floorBtn').onclick=()=>{$('floorEnabled').checked=!settings.floorEnabled;$('floorEnabled').dispatchEvent(new Event('change'));setTab('scene');};
+  for(const k of ['floorExport','floorGrid'])$(k).onchange=e=>{settings[k]=e.target.checked;groundGuide.update(settings);record();};
+  for(const [k,min,max]of [['floorWidth',60,600],['floorLength',60,600],['floorY',-1000,1000]]){
+    $(k).oninput=e=>{if(e.target.value==='')return;const n=+e.target.value;if(!Number.isFinite(n))return;settings[k]=THREE.MathUtils.clamp(n,min,max);updateGround();queueSave();};
+    $(k).onchange=()=>{$(k).value=settings[k];record();};
+  }
+  $('floorAlign').onclick=()=>{const box=objectBounds();if(box.isEmpty()){toast('Сначала покажите хотя бы один предмет');return;}settings.floorY=THREE.MathUtils.clamp(Math.round((box.min.y-.003)*1000)/10,-1000,1000);$('floorY').value=settings.floorY;updateGround();record();toast('Земля расположена под нижней точкой комплекта');};
   $('cameraViews').onclick=e=>{const b=e.target.closest('[data-view]');if(b)setView(b.dataset.view);};
   $('projectionBtn').onclick=()=>projection(settings.projection==='perspective'?'orthographic':'perspective');
   $('fitBtn').onclick=()=>fit();$('gridBtn').onclick=()=>{settings.grid=!settings.grid;grid.visible=settings.grid;$('gridBtn').classList.toggle('active',settings.grid);record();};
@@ -176,16 +193,16 @@ function setTab(tab){const object=tab==='object';$('objectInspector').hidden=!ob
 function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);}
 async function exportPNG(){
   if(exporting)return;exporting=true;document.body.classList.add('exporting');$('exportBtn').disabled=true;$('exportTop').disabled=true;
-  const [w,h]=exportDimensions(),oldRatio=renderer.getPixelRatio(),gridVisible=grid.visible,helperVisible=gizmoHelper.visible,outlineVis=outlines.map(o=>o.visible),oldAspect=camera.aspect;
+  const [w,h]=exportDimensions(),oldRatio=renderer.getPixelRatio(),gridVisible=grid.visible,floorVisible=groundGuide.visible,helperVisible=gizmoHelper.visible,outlineVis=outlines.map(o=>o.visible),oldAspect=camera.aspect;
   try {
     toast(`Готовим PNG ${w} × ${h}…`);await new Promise(r=>requestAnimationFrame(r));orbit.update();
-    grid.visible=false;gizmoHelper.visible=false;outlines.forEach(o=>o.visible=false);renderer.setPixelRatio(1);renderer.setSize(w,h,false);camera.aspect=w/h;if(camera.isOrthographicCamera){camera.left=-w/h;camera.right=w/h;}camera.updateProjectionMatrix();renderer.render(scene,camera);
+    grid.visible=false;groundGuide.visible=settings.floorEnabled&&settings.floorExport;gizmoHelper.visible=false;outlines.forEach(o=>o.visible=false);renderer.setPixelRatio(1);renderer.setSize(w,h,false);camera.aspect=w/h;if(camera.isOrthographicCamera){camera.left=-w/h;camera.right=w/h;}camera.updateProjectionMatrix();renderer.render(scene,camera);
     const blob=await new Promise((resolve,reject)=>renderer.domElement.toBlob(b=>b?resolve(b):reject(Error('Не удалось создать PNG')),'image/png'));
     const dataURL=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob);});
     const name=`ski-form-${w}x${h}-${Date.now()}.png`;$('exportPreview').src=dataURL;$('exportAgain').href=dataURL;$('exportAgain').download=name;$('exportResultSize').textContent=`${w} × ${h} · PNG`;$('exportResult').hidden=false;
     download(blob,name);toast('PNG готов. Ссылка на скачивание — в панели экспорта.');
   }catch(error){console.error(error);toast('Не удалось выгрузить кадр. Попробуйте меньшее разрешение.');}
-  finally{renderer.setPixelRatio(oldRatio);grid.visible=gridVisible;gizmoHelper.visible=helperVisible;outlines.forEach((o,i)=>o.visible=outlineVis[i]);camera.aspect=oldAspect;exporting=false;resize();renderer.render(scene,camera);document.body.classList.remove('exporting');$('exportBtn').disabled=false;$('exportTop').disabled=false;}
+  finally{renderer.setPixelRatio(oldRatio);grid.visible=gridVisible;groundGuide.visible=floorVisible;gizmoHelper.visible=helperVisible;outlines.forEach((o,i)=>o.visible=outlineVis[i]);camera.aspect=oldAspect;exporting=false;resize();renderer.render(scene,camera);document.body.classList.remove('exporting');$('exportBtn').disabled=false;$('exportTop').disabled=false;}
 }
 function saveFile(){const data=sceneData();download(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),`ski-form-scene-${Date.now()}.json`);safeWrite(STORE,data);toast('Сцена сохранена в JSON файл');}
 function saveToLibrary(){if(library.length>=24){toast('Сохранено 24 композиции. Удалите ненужную, чтобы добавить новую.');return;}const name=`Композиция ${String(library.length+1).padStart(2,'0')}`;library.push({name,scene:sceneData(),id:Date.now()});if(safeWrite(LIBRARY,library)){renderLibrary();toast('Композиция сохранена в этом браузере');}}
@@ -198,11 +215,13 @@ function validate(d){
   if(!['1:1','3:4','4:3','9:16'].includes(d.settings.ratio)||![1024,2048,4096].includes(d.settings.resolution)||!['white','gray','transparent'].includes(d.settings.background)||!['clay','white','graphite'].includes(d.settings.material)||!['perspective','orthographic'].includes(d.settings.projection))throw Error('Неверные настройки сцены');
   if(!Number.isFinite(d.settings.light)||d.settings.light<50||d.settings.light>150||!Number.isFinite(d.settings.focal)||d.settings.focal<28||d.settings.focal>120)throw Error('Неверные настройки света или камеры');
   for(const k of ['shadow','grid'])if(typeof d.settings[k]!=='boolean')throw Error('Неверная настройка сцены');
+  for(const k of ['floorEnabled','floorExport','floorGrid'])if(k in d.settings&&typeof d.settings[k]!=='boolean')throw Error('Неверная настройка земли');
+  for(const [k,min,max]of [['floorWidth',60,600],['floorLength',60,600],['floorY',-1000,1000]])if(k in d.settings&&(!Number.isFinite(d.settings[k])||d.settings[k]<min||d.settings[k]>max))throw Error('Неверные размеры земли');
   d.objects.forEach((o,i)=>{if(o.id!==i||typeof o.visible!=='boolean'||!vectorOK(o.position,3,10)||!vectorOK(o.quaternion,4,1.01)||Math.abs(o.quaternion.reduce((s,n)=>s+n*n,0)-1)>.02)throw Error('Некорректное положение предмета');});
   if(!d.camera||!vectorOK(d.camera.position,3)||!vectorOK(d.camera.target,3)||!vectorOK(d.camera.quaternion,4,1.01)||!Number.isFinite(d.camera.zoom)||d.camera.zoom<=0||d.camera.zoom>100)throw Error('Неверная камера');
 }
 function restore(data){
-  const selected=[...state.selected];state.restoring=true;try{releaseSelection();for(const k of Object.keys(defaults))config[k]=data.config[k];for(const k of Object.keys(settings))if(k in data.settings)settings[k]=data.settings[k];rebuild();
+  const selected=[...state.selected];state.restoring=true;try{releaseSelection();for(const k of Object.keys(defaults))config[k]=data.config[k];for(const k of Object.keys(DEFAULT_SETTINGS))settings[k]=k in data.settings?data.settings[k]:DEFAULT_SETTINGS[k];rebuild();
     data.objects.forEach((o,i)=>{items[i].position.fromArray(o.position);items[i].quaternion.fromArray(o.quaternion).normalize();items[i].visible=o.visible;});
     const wanted=settings.projection;if(wanted==='orthographic'&&!camera.isOrthographicCamera)projection('orthographic',false);if(wanted==='perspective'&&!camera.isPerspectiveCamera)projection('perspective',false);
     camera.position.fromArray(data.camera.position);camera.quaternion.fromArray(data.camera.quaternion).normalize();camera.zoom=data.camera.zoom;orbit.target.fromArray(data.camera.target);if(camera.isPerspectiveCamera)camera.setFocalLength(settings.focal);camera.updateProjectionMatrix();orbit.update();

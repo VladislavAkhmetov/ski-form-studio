@@ -1,15 +1,18 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
+import { buildNNNStep } from './binding.js';
 
 export const defaults = { skiLength:180, skiWidth:4.8, tipRise:5.5, poleLength:150, bindings:true, straps:true };
 const tones = {
-  clay:['#c4c3bf','#545953','#92988d','#cdd2c4'],
+  clay:['#c4c3bf','#545953','#92988d','#ecece6'],
   white:['#ededdf','#b6b9ac','#d0d3c5','#fafbef'],
   graphite:['#656a69','#363d3c','#828b85','#a0aaa0']
 };
 export const materials = Object.fromEntries(['body','binding','detail','accent'].map(key => [key,new THREE.MeshStandardMaterial({roughness:.72,metalness:.02})]));
+materials.recess=new THREE.MeshStandardMaterial({color:'#292e29',roughness:.88});
 export function setMaterial(name='clay') {
   (tones[name] || tones.clay).forEach((color,i)=>materials[['body','binding','detail','accent'][i]].color.set(color));
+  materials.recess.color.set(name==='white'?'#909889':name==='graphite'?'#252e28':'#292e29');
 }
 setMaterial();
 function mesh(geometry,material,parent,x=0,y=0,z=0) {
@@ -56,26 +59,7 @@ function skiBody(opts) {
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setIndex(indices);geo.computeVertexNormals();return geo;
 }
 function buildBinding(parent,opts) {
-  const top=profile(.45,opts).y+.013;
-  const w=Math.min(opts.skiWidth/100*.85,.041),z=-.075;
-  box(parent,w,.008,.228,0,top+.004,z,materials.detail,.004);
-  box(parent,w*.93,.013,.155,0,top+.012,z-.027,materials.binding,.005);
-  box(parent,w*.94,.023,.062,0,top+.017,z+.079,materials.binding,.007);
-  box(parent,w*.72,.009,.049,0,top+.031,z+.081,materials.accent,.005);
-  box(parent,w*.29,.008,.03,0,top+.039,z+.081,materials.binding,.003);
-  box(parent,w*.14,.002,.017,0,top+.044,z+.082,materials.detail,.001);
-  for(const sign of [-1,1]) {
-    box(parent,.003,.007,.113,sign*w*.32,top+.022,z-.03,materials.detail,.001);
-    box(parent,.0025,.003,.02,sign*w*.36,top+.023,z+.015,materials.accent,.001);
-  }
-  // The toe hinge and screw heads remain real geometry in every view.
-  const hinge=mesh(new THREE.CylinderGeometry(.0026,.0026,w*.8,12),materials.detail,parent,0,top+.026,z+.042);hinge.rotation.z=Math.PI/2;
-  for(const zz of [z-.093,z+.034]) for(const xx of [-w*.3,w*.3]) {
-    mesh(new THREE.CylinderGeometry(.0018,.0018,.0014,12),materials.accent,parent,xx,top+.02,zz);
-  }
-  box(parent,w*.94,.015,.079,0,top+.003,-.329,materials.binding,.006);
-  for(const xx of [-w*.3,w*.3]) box(parent,.002,.003,.061,xx,top+.012,-.329,materials.detail,.001);
-  mesh(new THREE.CylinderGeometry(.0025,.0025,.001,14),materials.detail,parent,0,top+.012,-.329);
+  buildNNNStep(parent,{width:Math.min(opts.skiWidth/100*.85,.041),top:profile(.45,opts).y+.013},materials);
 }
 export function createSki(opts) {
   const g=new THREE.Group();g.userData.kind='ski';mesh(skiBody(opts),materials.body,g);
