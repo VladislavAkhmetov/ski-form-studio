@@ -136,6 +136,7 @@ function updateExportLabels(){const [w,h]=exportDimensions();$('canvasFormat').t
 function applySettings(){
   setMaterial(settings.material);renderer.toneMappingExposure=.95*settings.light/100;scene.background=settings.background==='transparent'?null:new THREE.Color(settings.background==='gray'?'#eeeeeb':'#ffffff');$('artboard').classList.toggle('transparent',settings.background==='transparent');grid.visible=settings.grid;updateGround();
   for(const [key,value]of Object.entries(config)){const el=$(key+'Input')||$(key);if(el){if(el.type==='checkbox')el.checked=value;else el.value=value;}if($(key+'Value'))$(key+'Value').textContent=`${value} см`;}
+  $('bindingStyleInput').value=config.bindings?config.bindingStyle:'none';$('bindingStyleNote').hidden=!config.bindings||config.bindingStyle!=='block';
   $('shadowInput').checked=settings.shadow;$('lightInput').value=settings.light;$('lightValue').textContent=`${settings.light}%`;$('focalInput').value=settings.focal;$('focalValue').textContent=`${settings.focal} мм`;$('resolutionInput').value=settings.resolution;$('gridBtn').classList.toggle('active',settings.grid);
   for(const k of ['floorEnabled','floorExport','floorGrid'])$(k).checked=settings[k];for(const k of ['floorWidth','floorLength','floorY'])$(k).value=settings[k];$('floorControls').hidden=!settings.floorEnabled;$('floorBtn').classList.toggle('active',settings.floorEnabled);
   active('ratioOptions','ratio',settings.ratio);active('backgroundOptions','bg',settings.background);active('materialOptions','material',settings.material);updateExportLabels();
@@ -162,7 +163,8 @@ function bindUI(){
   $('snapInput').onchange=e=>{state.snap=e.target.checked;gizmo.setTranslationSnap(state.snap?.01:null);gizmo.setRotationSnap(state.snap?15*DEG:null);};
   $('resetObject').onclick=()=>{const ids=[...state.selected];releaseSelection();ids.forEach(id=>{const p=PRESETS[0].poses[id];items[id].position.set(...p.slice(0,3));items[id].rotation.set(0,0,0);});select(ids);updateGround();dirty();};
   for(const key of ['skiLength','skiWidth','tipRise','poleLength']){$(key).oninput=e=>{config[key]=+e.target.value;$(key+'Value').textContent=`${config[key]} см`;rebuild();};$(key).onchange=()=>record();}
-  for(const key of ['bindings','straps'])$(key+'Input').onchange=e=>{config[key]=e.target.checked;rebuild();record();};
+  $('strapsInput').onchange=e=>{config.straps=e.target.checked;rebuild();record();};
+  $('bindingStyleInput').onchange=e=>{config.bindings=e.target.value!=='none';if(config.bindings)config.bindingStyle=e.target.value;$('bindingStyleNote').hidden=!config.bindings||config.bindingStyle!=='block';rebuild();record();};
   $('objectTab').onclick=()=>setTab('object');$('sceneTab').onclick=()=>setTab('scene');
   $('materialOptions').onclick=e=>{const b=e.target.closest('[data-material]');if(!b)return;settings.material=b.dataset.material;setMaterial(settings.material);active('materialOptions','material',settings.material);record();};
   $('lightInput').oninput=e=>{settings.light=+e.target.value;renderer.toneMappingExposure=.95*settings.light/100;$('lightValue').textContent=settings.light+'%';};$('lightInput').onchange=record;
@@ -212,6 +214,7 @@ function validate(d){
   if(!d||d.version!==1||!d.config||!d.settings||!Array.isArray(d.objects)||d.objects.length!==4)throw Error('Неверный формат сцены');
   for(const [k,min,max]of [['skiLength',120,210],['skiWidth',3.8,8],['tipRise',2,12],['poleLength',90,180]])if(!Number.isFinite(d.config[k])||d.config[k]<min||d.config[k]>max)throw Error('Недопустимые размеры');
   for(const k of ['bindings','straps'])if(typeof d.config[k]!=='boolean')throw Error('Неверная настройка геометрии');
+  if('bindingStyle' in d.config&&!['nnn','block'].includes(d.config.bindingStyle))throw Error('Неверный тип креплений');
   if(!['1:1','3:4','4:3','9:16'].includes(d.settings.ratio)||![1024,2048,4096].includes(d.settings.resolution)||!['white','gray','transparent'].includes(d.settings.background)||!['clay','white','graphite'].includes(d.settings.material)||!['perspective','orthographic'].includes(d.settings.projection))throw Error('Неверные настройки сцены');
   if(!Number.isFinite(d.settings.light)||d.settings.light<50||d.settings.light>150||!Number.isFinite(d.settings.focal)||d.settings.focal<28||d.settings.focal>120)throw Error('Неверные настройки света или камеры');
   for(const k of ['shadow','grid'])if(typeof d.settings[k]!=='boolean')throw Error('Неверная настройка сцены');
@@ -221,7 +224,7 @@ function validate(d){
   if(!d.camera||!vectorOK(d.camera.position,3)||!vectorOK(d.camera.target,3)||!vectorOK(d.camera.quaternion,4,1.01)||!Number.isFinite(d.camera.zoom)||d.camera.zoom<=0||d.camera.zoom>100)throw Error('Неверная камера');
 }
 function restore(data){
-  const selected=[...state.selected];state.restoring=true;try{releaseSelection();for(const k of Object.keys(defaults))config[k]=data.config[k];for(const k of Object.keys(DEFAULT_SETTINGS))settings[k]=k in data.settings?data.settings[k]:DEFAULT_SETTINGS[k];rebuild();
+  const selected=[...state.selected];state.restoring=true;try{releaseSelection();for(const k of Object.keys(defaults))config[k]=k in data.config?data.config[k]:defaults[k];for(const k of Object.keys(DEFAULT_SETTINGS))settings[k]=k in data.settings?data.settings[k]:DEFAULT_SETTINGS[k];rebuild();
     data.objects.forEach((o,i)=>{items[i].position.fromArray(o.position);items[i].quaternion.fromArray(o.quaternion).normalize();items[i].visible=o.visible;});
     const wanted=settings.projection;if(wanted==='orthographic'&&!camera.isOrthographicCamera)projection('orthographic',false);if(wanted==='perspective'&&!camera.isPerspectiveCamera)projection('perspective',false);
     camera.position.fromArray(data.camera.position);camera.quaternion.fromArray(data.camera.quaternion).normalize();camera.zoom=data.camera.zoom;orbit.target.fromArray(data.camera.target);if(camera.isPerspectiveCamera)camera.setFocalLength(settings.focal);camera.updateProjectionMatrix();orbit.update();

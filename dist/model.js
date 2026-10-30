@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
 import { buildNNNStep } from './binding.js';
 
-export const defaults = { skiLength:180, skiWidth:4.8, tipRise:5.5, poleLength:150, bindings:true, straps:true };
+export const defaults = { skiLength:180, skiWidth:4.8, tipRise:5.5, poleLength:150, bindings:true, bindingStyle:'nnn', straps:true };
 const tones = {
   clay:['#c4c3bf','#545953','#92988d','#ecece6'],
   white:['#ededdf','#b6b9ac','#d0d3c5','#fafbef'],
@@ -10,6 +10,7 @@ const tones = {
 };
 export const materials = Object.fromEntries(['body','binding','detail','accent'].map(key => [key,new THREE.MeshStandardMaterial({roughness:.72,metalness:.02})]));
 materials.recess=new THREE.MeshStandardMaterial({color:'#292e29',roughness:.88});
+materials.marker=new THREE.MeshStandardMaterial({color:'#30332f',roughness:.9});
 export function setMaterial(name='clay') {
   (tones[name] || tones.clay).forEach((color,i)=>materials[['body','binding','detail','accent'][i]].color.set(color));
   materials.recess.color.set(name==='white'?'#909889':name==='graphite'?'#252e28':'#292e29');
@@ -59,6 +60,10 @@ function skiBody(opts) {
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setIndex(indices);geo.computeVertexNormals();return geo;
 }
 function buildBinding(parent,opts) {
+  if(opts.bindingStyle==='block'){
+    const marker=box(parent,Math.min(opts.skiWidth/100*.55,.028),.006,.34,0,profile(.45,opts).y+.016,-.15,materials.marker,.0006);
+    marker.name='Условное крепление · прямоугольник';return;
+  }
   buildNNNStep(parent,{width:Math.min(opts.skiWidth/100*.85,.041),top:profile(.45,opts).y+.013},materials);
 }
 export function createSki(opts) {
