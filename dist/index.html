@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f4f3f0">
+  <meta name="description" content="3D студия композиций лыж и палок. Управляйте каждым предметом, подбирайте ракурс и сохраняйте чистые изображения для генерации фотографий.">
+  <title>Ski Form — студия 3D композиций</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+</head>
+<body>
+<svg class="svg-defs" xmlns="http://www.w3.org/2000/svg"><defs>
+  <symbol id="i-move" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></symbol>
+  <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M20 10a8 8 0 1 0 .2 4M20 4v6h-6"/></symbol>
+  <symbol id="i-fit" viewBox="0 0 24 24"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4M8 8h8v8H8z"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-hidden" viewBox="0 0 24 24"><path d="m3 3 18 18M10 5c7-1 12 7 12 7a18 18 0 0 1-4 5M6 6a20 20 0 0 0-4 6s4 7 10 7c2 0 3-.5 4-1M10 10a3 3 0 0 0 4 4"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 3h12l4 4v14H3V3h2Zm2 0v7h9V3M7 21v-7h10v7"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="m8 4-5 5 5 5M3 9h11a7 7 0 0 1 0 14" transform="translate(0 -2)"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+  <symbol id="i-cube" viewBox="0 0 24 24"><path d="m12 2 9 5v10l-9 5-9-5V7l9-5Zm0 20V12M3 7l9 5 9-5M7.5 4.5l9 5v5"/></symbol>
+</defs></svg>
+<header class="app-header">
+  <a class="brand" href="./" aria-label="Ski Form"><span class="brand-icon"><svg><use href="#i-cube"/></svg></span><span>ski<span class="brand-slash">/</span>form<span class="brand-dot">.</span></span></a>
+  <span class="header-divider"></span><span class="header-subtitle">Студия 3D композиций</span>
+  <div class="header-actions"><span id="saveStatus" class="save-status"><i></i> На этом устройстве</span><button id="helpBtn" class="icon-button" aria-label="Как пользоваться" title="Как пользоваться">?</button><button id="saveBtn" class="button secondary"><svg><use href="#i-save"/></svg><span>Сохранить сцену</span></button><button id="exportTop" class="button primary"><svg><use href="#i-download"/></svg><span>Экспорт PNG</span></button></div>
+</header>
+<main class="workspace">
+  <aside class="left-panel panel">
+    <div class="panel-heading"><div><span class="eyebrow">ВАША КОМПОЗИЦИЯ</span><h1>Объекты <span>04</span></h1></div><button id="selectAll" class="text-button" title="Выбрать все предметы">Все</button></div>
+    <div id="objectList" class="object-list"></div>
+    <p class="selection-tip">Shift + клик — выбрать несколько</p>
+    <section class="preset-section"><div class="section-heading"><h2>Быстрый старт</h2><span>06</span></div><p class="section-copy">Готовая раскладка — ваш новый ракурс.</p><div id="presets" class="preset-grid"></div></section>
+    <section class="library-section"><div class="section-heading"><h2>Мои композиции</h2><button id="addPreset" class="icon-button small" title="Сохранить текущую композицию" aria-label="Сохранить текущую композицию">+</button></div><div id="savedPresets"></div><button id="importBtn" class="import-button"><svg><use href="#i-save"/></svg> Открыть сцену из файла</button><input type="file" id="importFile" accept=".json,application/json" hidden></section>
+    <div class="left-footer"><span class="mini-dot"></span> Форма. Свет. Ракурс.<br><span>Основа для вашей следующей фотографии.</span></div>
+  </aside>
+  <section class="studio" aria-label="3D сцена">
+    <div class="studio-top"><div class="studio-title"><span class="eyebrow">СТУДИЯ</span><span id="compositionLabel">Параллельная раскладка</span></div><div class="history-actions"><button id="undoBtn" class="icon-button" title="Отменить · Ctrl+Z" aria-label="Отменить"><svg><use href="#i-undo"/></svg></button><button id="redoBtn" class="icon-button" title="Повторить · Ctrl+Shift+Z" aria-label="Повторить"><svg class="mirror"><use href="#i-undo"/></svg></button></div></div>
+    <div class="stage" id="stage">
+      <div class="viewport-toolbar"><div class="tool-segment"><button id="moveBtn" class="tool active" title="Переместить · G"><svg><use href="#i-move"/></svg><span>Двигать</span><kbd>G</kbd></button><button id="rotateBtn" class="tool" title="Повернуть · R"><svg><use href="#i-rotate"/></svg><span>Вращать</span><kbd>R</kbd></button></div><button id="spaceBtn" class="tool standalone" title="Система координат">Мировые оси</button></div>
+      <div class="artboard" id="artboard"><canvas id="viewport" aria-label="Интерактивные 3D лыжи и палки"></canvas><div id="loading" class="loading"><span class="loader"></span>Подготавливаем студию…</div></div>
+      <div class="canvas-label"><span id="canvasFormat">3:4</span><span id="renderSize">1536 × 2048 px</span></div>
+      <div class="scene-tools"><button id="gridBtn" class="icon-button" title="Сетка" aria-label="Сетка"><svg><use href="#i-grid"/></svg></button><button id="fitBtn" class="icon-button" title="Вписать в кадр · F" aria-label="Вписать в кадр"><svg><use href="#i-fit"/></svg></button></div>
+      <div class="orientation" aria-hidden="true"><span class="axis-y">Y</span><span class="axis-z">Z</span><span class="axis-x">X</span><i></i></div>
+    </div>
+    <div class="camera-bar"><span class="camera-label">Ракурс</span><div class="camera-views" id="cameraViews"><button data-view="top">Сверху</button><button data-view="threequarter" class="active">¾</button><button data-view="side">Сбоку</button><button data-view="front">С торца</button><button data-view="bottom">Снизу</button></div><span class="camera-separator"></span><button id="projectionBtn" class="projection-button">Перспектива <svg><use href="#i-chevron"/></svg></button></div>
+    <div class="studio-footer"><span><span class="mouse-icon"></span> Крутить — левая кнопка <b>·</b> Сдвигать — правая <b>·</b> Масштаб — колесо</span><span id="selectionStatus">Выберите предмет</span></div>
+  </section>
+  <aside class="right-panel panel">
+    <div class="inspector-tabs" role="tablist"><button id="objectTab" class="active" role="tab" aria-selected="true">Предмет</button><button id="sceneTab" role="tab" aria-selected="false">Сцена</button></div>
+    <div class="inspector-scroll">
+      <div id="objectInspector">
+        <div class="selected-heading"><span class="selected-icon"><svg><use href="#i-cube"/></svg></span><div><span class="eyebrow">ВЫБРАНО</span><h2 id="selectedName">Лыжа 01</h2></div><span class="selection-badge" id="selectedCount">01</span></div>
+        <div id="emptySelection" class="empty-selection" hidden>Выберите лыжу или палку в сцене<br>или в списке слева.</div>
+        <div id="transformFields"><section class="inspector-section"><div class="section-heading"><h2>Положение</h2><span>см</span></div><div class="axis-fields" id="positionFields"></div></section><section class="inspector-section"><div class="section-heading"><h2>Вращение</h2><span>°</span></div><div class="axis-fields" id="rotationFields"></div><div class="quick-rotations"><button data-turn="-15">−15°</button><button data-turn="15">+15°</button><button data-turn="90">+90°</button><button id="flipBtn" title="Развернуть скользящей поверхностью вверх">Перевернуть</button></div></section>
+        <label class="check-row"><input type="checkbox" id="snapInput"><span>Привязка</span><small>1 см / 15°</small></label><button id="resetObject" class="reset-button"><svg><use href="#i-rotate"/></svg> Сбросить положение</button></div>
+        <section class="inspector-section model-section"><div class="section-heading"><h2>Геометрия комплекта</h2><span class="denton-badge">Denton ≈</span></div><p class="field-note">Размеры меняются у обеих лыж / палок.</p><label class="range-label" for="skiLength">Длина лыж <output id="skiLengthValue">180 см</output></label><input id="skiLength" type="range" min="120" max="210" step="1" value="180"><label class="range-label" for="skiWidth">Ширина лыж <output id="skiWidthValue">4.8 см</output></label><input id="skiWidth" type="range" min="3.8" max="8" step="0.1" value="4.8"><label class="range-label" for="tipRise">Загиб носка <output id="tipRiseValue">5.5 см</output></label><input id="tipRise" type="range" min="2" max="12" step="0.5" value="5.5"><label class="range-label" for="poleLength">Длина палок <output id="poleLengthValue">150 см</output></label><input id="poleLength" type="range" min="90" max="180" step="1" value="150"><label class="check-row"><input id="bindingsInput" type="checkbox" checked><span>Крепления</span></label><label class="check-row"><input id="strapsInput" type="checkbox" checked><span>Ремешки на палках</span></label></section>
+      </div>
+      <div id="sceneInspector" hidden><section class="inspector-section scene-section"><div class="section-heading"><h2>Материал предметов</h2><span>Без текстур</span></div><div class="material-options" id="materialOptions"><button data-material="clay" class="active"><i style="background:#d6d3cf"></i>Светлый</button><button data-material="white"><i style="background:#f9f9f6"></i>Белый</button><button data-material="graphite"><i style="background:#575b64"></i>Графит</button></div></section><section class="inspector-section"><div class="section-heading"><h2>Студийный свет</h2></div><label class="range-label" for="lightInput">Яркость <output id="lightValue">100%</output></label><input id="lightInput" type="range" min="50" max="150" value="100"><label class="check-row"><input id="shadowInput" type="checkbox" checked><span>Тень под предметами</span></label><p class="field-note">Плоскость для тени подстраивается под нижнюю точку композиции.</p></section><section class="inspector-section"><div class="section-heading"><h2>Камера</h2></div><label class="range-label" for="focalInput">Фокусное расстояние <output id="focalValue">70 мм</output></label><input id="focalInput" type="range" min="28" max="120" value="70"><p class="field-note">Большее значение — спокойная предметная перспектива.</p></section></div>
+      <section class="export-section"><div class="section-heading"><h2>Кадр и экспорт</h2><span>PNG</span></div><label class="field-label">Формат кадра</label><div class="ratio-options" id="ratioOptions"><button data-ratio="1:1"><i class="ratio-square"></i>1:1</button><button data-ratio="3:4" class="active"><i class="ratio-portrait"></i>3:4</button><button data-ratio="4:3"><i class="ratio-landscape"></i>4:3</button><button data-ratio="9:16"><i class="ratio-tall"></i>9:16</button></div><div class="export-row"><label for="resolutionInput">Длинная сторона</label><select id="resolutionInput"><option value="1024">1024 px</option><option value="2048" selected>2048 px</option><option value="4096">4096 px</option></select></div><label class="field-label">Фон</label><div class="background-options" id="backgroundOptions"><button data-bg="white" class="active" title="Белый фон" aria-label="Белый фон"><i class="swatch white"></i>Белый</button><button data-bg="gray" title="Светло-серый фон" aria-label="Светло-серый фон"><i class="swatch gray"></i>Серый</button><button data-bg="transparent" title="Прозрачный фон" aria-label="Прозрачный фон"><i class="swatch transparent"></i>Альфа</button></div><button id="exportBtn" class="button primary export-main"><svg><use href="#i-download"/></svg> Скачать изображение</button><p class="export-note">Чистый кадр. Без сетки и выделения.</p></section>
+    </div>
+    <div class="right-footer"><span>SKI FORM</span><span>LOCAL STUDIO / 01</span></div>
+  </aside>
+</main>
+<div class="toast" id="toast" role="status"></div>
+<dialog id="helpDialog"><button id="closeHelp" class="dialog-close" aria-label="Закрыть">×</button><span class="eyebrow">НЕБОЛЬШАЯ ПАМЯТКА</span><h2>Всё начинается с ракурса.</h2><p>Выберите готовую раскладку, двигайте предметы и найдите свой кадр. Все четыре предмета независимы.</p><div class="help-rows"><div><span>Выбрать предмет</span><strong>Клик по предмету</strong></div><div><span>Выбрать несколько</span><strong>Shift + клик</strong></div><div><span>Перемещать / вращать</span><strong>G / R</strong></div><div><span>Вписать в кадр</span><strong>F</strong></div><div><span>Отменить / повторить</span><strong>Ctrl + Z / Ctrl + Shift + Z</strong></div><div><span>Снять выделение</span><strong>Esc</strong></div><div><span>Выбрать всё</span><strong>Ctrl + A</strong></div></div><p>Круговые ручки вращают предмет. Стрелки перемещают вдоль оси. Числа справа позволяют задать точное положение.</p><div class="help-callout">Экспортируйте PNG и используйте вместе с фотографиями товара: болванка задаст постановку, фотографии — внешний вид.</div><p class="field-note">Автосохранение и «Мои композиции» хранятся только в этом браузере. «Сохранить сцену» скачивает переносимый JSON файл.</p><button id="helpDone" class="button primary">Начать композицию <span>↗</span></button></dialog>
+<script type="module" src="./app.js"></script>
+</body></html>
