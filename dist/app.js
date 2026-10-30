@@ -180,7 +180,10 @@ async function exportPNG(){
   try {
     toast(`Готовим PNG ${w} × ${h}…`);await new Promise(r=>requestAnimationFrame(r));orbit.update();
     grid.visible=false;gizmoHelper.visible=false;outlines.forEach(o=>o.visible=false);renderer.setPixelRatio(1);renderer.setSize(w,h,false);camera.aspect=w/h;if(camera.isOrthographicCamera){camera.left=-w/h;camera.right=w/h;}camera.updateProjectionMatrix();renderer.render(scene,camera);
-    const blob=await new Promise((resolve,reject)=>renderer.domElement.toBlob(b=>b?resolve(b):reject(Error('Не удалось создать PNG')),'image/png'));download(blob,`ski-form-${w}x${h}-${Date.now()}.png`);toast('PNG сохранён — можно использовать для генерации');
+    const blob=await new Promise((resolve,reject)=>renderer.domElement.toBlob(b=>b?resolve(b):reject(Error('Не удалось создать PNG')),'image/png'));
+    const dataURL=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob);});
+    const name=`ski-form-${w}x${h}-${Date.now()}.png`;$('exportPreview').src=dataURL;$('exportAgain').href=dataURL;$('exportAgain').download=name;$('exportResultSize').textContent=`${w} × ${h} · PNG`;$('exportResult').hidden=false;
+    download(blob,name);toast('PNG готов. Ссылка на скачивание — в панели экспорта.');
   }catch(error){console.error(error);toast('Не удалось выгрузить кадр. Попробуйте меньшее разрешение.');}
   finally{renderer.setPixelRatio(oldRatio);grid.visible=gridVisible;gizmoHelper.visible=helperVisible;outlines.forEach((o,i)=>o.visible=outlineVis[i]);camera.aspect=oldAspect;exporting=false;resize();renderer.render(scene,camera);document.body.classList.remove('exporting');$('exportBtn').disabled=false;$('exportTop').disabled=false;}
 }
