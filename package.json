@@ -1,7 +1,11 @@
 {
   "name": "ski-form-studio",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "scripts": { "start": "node server.mjs", "check": "node --check dist/app.js && node --check dist/model.js && node --check dist/binding.js && node --check dist/ground.js && node --check server.mjs" }
+  "scripts": {
+    "start": "node server.mjs",
+    "check": "node --check dist/studio.js && node --check dist/human.js && node --check dist/attachments.js && node --check dist/scene-data.js && node --check dist/poses.js && node --check dist/model.js && node --check dist/binding.js && node --check dist/ground.js && node --check server.mjs",
+    "test": "node --import ./tests/register.mjs --test ./tests/studio.test.mjs"
+  }
 }
