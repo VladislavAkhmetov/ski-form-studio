@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import {defaultHuman} from './human.js';
-import {emptyLinks,setWorldTransform} from './attachments.js';
+import {defaultHuman} from './human.js?v=5';
+import {emptyLinks,setWorldTransform} from './attachments.js?v=5';
 export const HUMAN_POSES=[
  {id:'stand',name:'Спокойная стойка',hint:'На лыжах, с палками'},
  {id:'lean',name:'Опора на лыжи',hint:'Лыжи вертикально, рука сверху'},

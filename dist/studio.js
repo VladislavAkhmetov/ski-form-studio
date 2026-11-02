@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import {OrbitControls} from './vendor/OrbitControls.js';
-import {TransformControls} from './vendor/TransformControls.js';
-import {defaults,createSki,createPole,replaceModel,setMaterial} from './model.js';
-import {GroundGuide} from './ground.js';
-import {HumanRig,CONTROL_NAMES,TARGETS,defaultHuman} from './human.js';
-import {HUMAN_POSES,humanPose,placeGear} from './poses.js';
-import {AttachmentSystem,emptyLinks,LINK_NAMES,worldTransform,setWorldTransform} from './attachments.js';
-import {DEFAULT_SETTINGS,validateScene,upgradeScene,unpackFile,cleanName,estimatedBytes,encodeSharedScene,decodeSharedScene} from './scene-data.js';
+import {OrbitControls} from './vendor/OrbitControls.js?v=5';
+import {TransformControls} from './vendor/TransformControls.js?v=5';
+import {defaults,createSki,createPole,replaceModel,setMaterial} from './model.js?v=5';
+import {GroundGuide} from './ground.js?v=5';
+import {HumanRig,CONTROL_NAMES,TARGETS,defaultHuman} from './human.js?v=5';
+import {HUMAN_POSES,humanPose,placeGear} from './poses.js?v=5';
+import {AttachmentSystem,emptyLinks,LINK_NAMES,worldTransform,setWorldTransform} from './attachments.js?v=5';
+import {DEFAULT_SETTINGS,validateScene,upgradeScene,unpackFile,cleanName,estimatedBytes,encodeSharedScene,decodeSharedScene} from './scene-data.js?v=5';
 
 const $=id=>document.getElementById(id),D=Math.PI/180;
 const STORE='ski-form-scene-v1',LIBRARY='ski-form-library-v1',LIBRARY_BUDGET=3.5*1024*1024;

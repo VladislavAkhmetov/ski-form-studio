@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { buildNNNStep } from './binding.js';
+import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js?v=5';
+import { buildNNNStep } from './binding.js?v=5';
 
 export const defaults = { skiLength:180, skiWidth:4.8, tipRise:5.5, poleLength:150, bindings:true, bindingStyle:'nnn', straps:true };
 const tones = {

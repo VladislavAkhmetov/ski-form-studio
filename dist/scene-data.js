@@ -1,5 +1,5 @@
-import {defaultHuman} from './human.js';
-import {emptyLinks,LINK_NAMES} from './attachments.js';
+import {defaultHuman} from './human.js?v=5';
+import {emptyLinks,LINK_NAMES} from './attachments.js?v=5';
 export const DEFAULT_SETTINGS=Object.freeze({ratio:'3:4',resolution:2048,background:'white',shadow:true,grid:false,material:'clay',light:100,focal:70,projection:'perspective',floorEnabled:false,floorExport:true,floorGrid:true,floorWidth:120,floorLength:240,floorY:-.5});
 const vec=(v,len,max=100)=>Array.isArray(v)&&v.length===len&&v.every(n=>Number.isFinite(n)&&Math.abs(n)<=max);
 const quat=v=>vec(v,4,1.01)&&Math.abs(v.reduce((s,n)=>s+n*n,0)-1)<.02;
