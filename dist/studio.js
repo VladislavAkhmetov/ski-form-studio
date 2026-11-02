@@ -208,4 +208,8 @@ async function shareScene(){$('shareBtn').disabled=true;try{const encoded=await 
 async function readSharedLink(){if(!location.hash.startsWith('#scene='))return;try{incoming=await decodeSharedScene(location.hash.slice(7));$('incomingName').textContent=incoming.name;$('incomingDialog').showModal();}catch(error){toast(error.message||'Не удалось открыть ссылку');clearShareHash();}}
 function clearShareHash(){window.history.replaceState(null,'',location.pathname+location.search);incoming=null;}
 
-init().catch(error=>{console.error(error);$('loading').innerHTML='<strong>3D сцена не запустилась.</strong><span>Попробуйте обновить страницу в браузере с WebGL.</span>';});
+init().catch(error=>{
+  console.error('3D Init failed:', error);
+  $('loading').hidden = false;
+  $('loading').innerHTML = `<div style="max-width:480px;padding:16px;text-align:center"><strong style="display:block;margin-bottom:6px;font-size:15px;color:#c62828">3D сцена не запустилась</strong><span style="display:block;margin-bottom:8px;font-size:13px;color:#444">${error?.message||String(error)}</span><pre style="text-align:left;font-size:11px;max-height:120px;overflow:auto;background:rgba(0,0,0,0.06);padding:8px;border-radius:4px;white-space:pre-wrap;color:#333;margin:0">${error?.stack||''}</pre><p style="margin:10px 0 0;font-size:12px;color:#666">Проверьте, включено ли аппаратное ускорение в браузере (WebGL 2).</p></div>`;
+});
