@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# The app is a prebuilt static site in dist/ (Three.js vendored under dist/vendor).
+# package.json declares no dependencies and there is no lockfile, so nothing to install.
+echo "No dependencies to install."
+exit 0

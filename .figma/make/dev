@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# Serve dist/ as-is. The app resolves bare `three` imports via a browser import map,
+# which Vite's dev server would try to rewrite, so use a plain static server instead.
+# server.mjs is not used because it hardcodes 127.0.0.1:4173.
+exec pnpm dlx serve@14.2.4 dist --listen "tcp://0.0.0.0:${PORT}" --no-clipboard

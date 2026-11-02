@@ -1,12 +1,20 @@
+import * as THREE from 'three';
 import {defaultHuman} from './human.js';
+import {emptyLinks,setWorldTransform} from './attachments.js';
 export const HUMAN_POSES=[
  {id:'stand',name:'Спокойная стойка',hint:'На лыжах, с палками'},
+ {id:'lean',name:'Опора на лыжи',hint:'Лыжи вертикально, рука сверху'},
+ {id:'shoulder',name:'Лыжи на плече',hint:'Вместе с палками, в шаге'},
+ {id:'hug',name:'Лыжи перед собой',hint:'Держит двумя руками'},
+ {id:'yoke',name:'Палки за плечами',hint:'На лыжах, расслабленно'},
+ {id:'rest',name:'Отдых на палках',hint:'Руки на рукоятках'},
  {id:'classic',name:'Классический шаг',hint:'Одна нога впереди'},
  {id:'skate',name:'Коньковый толчок',hint:'Лыжи под углом'},
  {id:'double',name:'Двойной толчок',hint:'Наклон вперёд'},
  {id:'tuck',name:'Низкая стойка',hint:'Согнутые колени'},
  {id:'carry',name:'Лыжи в руке',hint:'Вертикальный комплект'}
 ];
+const SHOULDER_TOP=.065;
 export function humanPose(id,height=175){
   const h=defaultHuman();h.height=height;
   if(id==='classic'){h.pelvis=[0,.885,0];h.torso=[16,0,0];h.targets.leftFoot=[.11,.035,.36];h.targets.rightFoot=[-.11,.035,-.35];h.targets.leftHand=[.25,1.15,-.10];h.targets.rightHand=[-.25,.88,.40];h.rotations.rightFoot=[25,0,0];}
@@ -14,5 +22,73 @@ export function humanPose(id,height=175){
   if(id==='double'){h.pelvis=[0,.83,-.04];h.torso=[42,0,0];h.targets.leftHand=[.28,1.1,.64];h.targets.rightHand=[-.28,1.1,.64];}
   if(id==='tuck'){h.pelvis=[0,.68,-.13];h.torso=[45,0,0];h.targets.leftFoot=[.15,.035,.20];h.targets.rightFoot=[-.15,.035,.20];h.targets.leftHand=[.28,.76,.45];h.targets.rightHand=[-.28,.76,.45];}
   if(id==='carry'){h.targets.leftHand=[.24,1.02,.15];h.targets.rightHand=[-.28,1.05,.12];}
+  // Weight on the left leg, hip lifted, right hand resting on vertical skis.
+  if(id==='lean'){h.pelvis=[.035,.95,0];h.pelvisRot=[0,-10,5];h.torso=[2,14,-8];h.head=[-4,-22,7];h.targets.leftFoot=[.09,.035,.08];h.targets.rightFoot=[-.2,.035,.17];h.rotations.leftFoot=[0,8,0];h.rotations.rightFoot=[12,-22,0];h.swivel.rightFoot=-10;h.targets.rightHand=[-.27,1.38,.12];h.rotations.rightHand=[0,-70,-90];h.swivel.rightHand=35;h.targets.leftHand=[.2,.99,-.04];h.rotations.leftHand=[0,90,-20];h.swivel.leftHand=-70;}
+  // Walking with the skis and poles on the right shoulder, glancing toward the camera.
+  if(id==='shoulder'){h.pelvis=[0,.93,.02];h.pelvisRot=[0,8,0];h.torso=[3,-10,-2];h.head=[-3,24,2];h.targets.leftFoot=[.1,.035,.3];h.targets.rightFoot=[-.11,.035,-.2];h.rotations.rightFoot=[24,0,0];h.targets.leftHand=[.23,.87,-.1];h.rotations.leftHand=[-10,0,0];h.targets.rightHand=[-.24,1.32,.3];h.rotations.rightHand=[0,0,-90];h.swivel.rightHand=60;}
+  // Skis standing in front, held with both hands, relaxed weight shift.
+  if(id==='hug'){h.pelvis=[-.025,.95,-.02];h.pelvisRot=[0,6,-4];h.torso=[4,-6,5];h.head=[-2,8,-8];h.targets.leftFoot=[.16,.035,.14];h.targets.rightFoot=[-.09,.035,.05];h.rotations.leftFoot=[8,18,0];h.targets.leftHand=[-.06,1.38,.3];h.rotations.leftHand=[0,-90,90];h.targets.rightHand=[-.15,1.12,.3];h.rotations.rightHand=[0,90,-90];h.swivel.rightHand=30;h.swivel.leftHand=-30;}
+  // On skis, poles across the shoulders behind the neck, wrists draped over them.
+  if(id==='yoke'){h.pelvis=[0,.955,0];h.pelvisRot=[0,0,2];h.torso=[-5,4,-2];h.head=[-10,-12,4];h.targets.leftFoot=[.13,.035,.1];h.targets.rightFoot=[-.13,.035,.06];h.targets.leftHand=[.45,1.48,-.05];h.rotations.leftHand=[0,0,90];h.targets.rightHand=[-.45,1.48,-.05];h.rotations.rightHand=[0,0,-90];h.swivel.leftHand=-60;h.swivel.rightHand=60;}
+  // On skis, leaning on both poles planted in front, hands stacked on the grips.
+  if(id==='rest'){h.pelvis=[0,.93,-.03];h.torso=[9,0,0];h.head=[-12,0,0];h.targets.leftFoot=[.12,.035,.1];h.targets.rightFoot=[-.12,.035,.04];h.targets.leftHand=[.04,1.27,.36];h.rotations.leftHand=[90,0,0];h.targets.rightHand=[-.04,1.22,.36];h.rotations.rightHand=[90,0,0];h.swivel.leftHand=-40;h.swivel.rightHand=40;}
   return h;
+}
+
+const v=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
+// Quaternion whose local +Z follows `along` and local +Y (ski top / pole front) follows `face`.
+function orient(along,face){const z=along.clone().normalize(),y=face.clone().addScaledVector(z,-face.dot(z));if(y.lengthSq()<1e-8)y.set(0,0,1).addScaledVector(z,-z.z);y.normalize();const x=y.clone().cross(z);return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x,y,z));}
+// Two skis held base to base: the first faces `face`, the second faces away from it.
+function skiPair(center,along,face){const f=face.clone().addScaledVector(along.clone().normalize(),-face.dot(along.clone().normalize())).normalize();return [{position:center.clone().addScaledVector(f,.002),quaternion:orient(along,f)},{position:center.clone().addScaledVector(f,-.002),quaternion:orient(along,f.clone().negate())}];}
+
+/** Places the four gear items for a pose, adjusting grasping hands to the equipment. Positions are in the human's local frame. */
+function lifestyleGear(id,human,config){
+  const s=human.state.height/175,L=config.skiLength/100,P=config.poleLength/100,grip=P/2-.07,up=v(0,1,0),out=[];
+  const shoulder=side=>human.parts[side+'Shoulder'].position.clone();
+  const hands={};
+  if(id==='lean'){
+    const along=v(.07,1,0).normalize(),base=v(-.43*s,.004,.13*s),center=base.clone().addScaledVector(along,L/2);
+    out.push(...skiPair(center,along,v(0,0,1)));
+    const atHand=base.clone().addScaledVector(along,Math.min(L-.08,1.38*s)/along.y);
+    hands.rightHand=atHand.clone().add(v(.045,0,0));
+    for(const dz of [-.035,-.055]){const pb=v(-.47*s,.003,.13*s+dz),pc=pb.clone().addScaledVector(along,P/2);out.push({position:pc,quaternion:orient(along,v(1,0,0))});}
+  }
+  if(id==='shoulder'){
+    const along=v(0,-Math.sin(16*Math.PI/180),Math.cos(16*Math.PI/180)),lift=up.clone().addScaledVector(along,-along.y).normalize(),top=shoulder('right').add(v(-.012*s,SHOULDER_TOP*s,0));
+    const skiCenter=top.clone().addScaledVector(lift,config.skiWidth/200).addScaledVector(along,-.04);
+    out.push(...skiPair(skiCenter,along,v(1,0,0)));
+    const reach=.34*s,handAt=top.clone().addScaledVector(along,reach);
+    hands.rightHand=handAt.clone().add(v(-.035*s,.005,0));
+    for(const dx of [-.009,.009]){const g=top.clone().addScaledVector(lift,config.skiWidth/100+.012).addScaledVector(along,reach+.1).add(v(dx,0,0));out.push({position:g.addScaledVector(along,-grip),quaternion:orient(along,lift)});}
+  }
+  if(id==='hug'){
+    const along=v(-.03,1,-.04).normalize(),base=v(-.2*s,.004,.36*s),center=base.clone().addScaledVector(along,L/2);
+    out.push(...skiPair(center,along,v(0,0,1)));
+    const at=y=>base.clone().addScaledVector(along,Math.min(L-.06,y*s)/along.y);
+    hands.leftHand=at(1.3).add(v(.05,0,-.01));hands.rightHand=at(1.02).add(v(-.05,0,-.01));
+    for(const dx of [-.075,-.095]){const pb=v(-.2*s+dx,.003,.34*s),pc=pb.clone().addScaledVector(along,P/2);out.push({position:pc,quaternion:orient(along,v(0,0,1))});}
+  }
+  if(id==='yoke'||id==='rest'){
+    out.push(null,null); // skis stay on the feet
+    if(id==='yoke'){const mid=shoulder('left').add(shoulder('right')).multiplyScalar(.5),y=mid.y+(SHOULDER_TOP+.02)*s,z=mid.z-.075*s;for(const [side,dz,dy] of [[1,0,0],[-1,-.004,.022]]){const c=v(-side*.06*s,y+dy,z+dz);out.push({position:c,quaternion:orient(v(side,0,0),v(0,0,1))});}hands.leftHand=v(.45*s,y+.045,z+.005);hands.rightHand=v(-.45*s,y+.065,z+.005);}
+    else{const top=v(0,1.2*s,.5*s);for(const side of [1,-1]){const h=top.clone().add(v(side*.025,0,0)),tipX=side*.24,flat=P*P-h.y*h.y-(h.x-tipX)**2,tip=v(tipX,0,h.z+Math.sqrt(Math.max(.0001,flat))),along=h.clone().sub(tip).normalize(),c=h.clone().addScaledVector(along,-P/2+.005);out.push({position:c,quaternion:orient(along,v(0,1,0))});}hands.leftHand=top.clone().add(v(.012,.065,-.01));hands.rightHand=top.clone().add(v(-.012,.02,-.01));}
+  }
+  return {gear:out,hands};
+}
+// Elbow direction preferences: hanging down and slightly out, or akimbo (out and back).
+const ELBOWS={lean:{leftHand:'akimbo'}};
+function relaxElbow(human,key,mode){const sign=key.startsWith('left')?1:-1,prefer=mode==='akimbo'?v(sign,-.25,-.7):v(sign*.35,-1,-.12);prefer.normalize();let best=0,score=-Infinity;for(let a=-180;a<=180;a+=5){human.state.swivel[key]=a;human.update();const l=human.limbs[key],d=l.joint.clone().sub(l.start).normalize().dot(prefer);if(d>score){score=d;best=a;}}human.state.swivel[key]=best;human.update();}
+export const LIFESTYLE_LINKS={lean:['rightHand','rightHand','rightHand','rightHand'],shoulder:['rightHand','rightHand','rightHand','rightHand'],hug:['leftHand','leftHand','rightHand','rightHand'],yoke:['leftFoot','rightFoot','leftHand','rightHand'],rest:['leftFoot','rightFoot','leftHand','rightHand']};
+
+/** Applies the pose's equipment layout: grasped gear follows the hand, worn skis follow the feet. */
+export function placeGear(id,human,gear,attachments,config){
+  attachments.links=emptyLinks();human.update();
+  const al=(i,t,o)=>attachments.align(i,t,o);
+  if(id==='carry'){al(0,'rightHand',{carry:true});al(1,'rightHand',{carry:true});al(2,'leftHand',{carry:true});al(3,'leftHand',{carry:true});return;}
+  if(!LIFESTYLE_LINKS[id]){al(0,'leftFoot');al(1,'rightFoot');al(2,'leftHand',{plant:id!=='tuck'});al(3,'rightHand',{plant:id!=='tuck'});return;}
+  const {gear:layout,hands}=lifestyleGear(id,human,config);
+  for(const [key,p] of Object.entries(hands))human.setTarget(key,p);human.update();for(const key of ['leftHand','rightHand'])relaxElbow(human,key,ELBOWS[id]?.[key]);
+  human.update();human.updateWorldMatrix(true,false);const rootQ=human.getWorldQuaternion(new THREE.Quaternion());
+  layout.forEach((item,i)=>{const target=LIFESTYLE_LINKS[id][i];if(!item){al(i,target);return;}setWorldTransform(gear[i],human.localToWorld(item.position.clone()),rootQ.clone().multiply(item.quaternion));attachments.capture(i,target);});
+  attachments.follow();
 }

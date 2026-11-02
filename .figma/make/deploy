@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# dist/ is a committed, prebuilt static site; the repo has no bundling step.
+# Run the repository's finite syntax check as the build gate.
+pnpm run check
+[[ -d "dist" ]] || {
+  echo "Expected build output at dist" >&2
+  exit 1
+}
+figma make deploy --build-dir "dist"

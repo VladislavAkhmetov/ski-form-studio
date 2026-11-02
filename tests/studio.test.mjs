@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {HumanRig,solveTwoBone} from '../dist/human.js';
-import {humanPose,HUMAN_POSES} from '../dist/poses.js';
+import {humanPose,HUMAN_POSES,placeGear,LIFESTYLE_LINKS} from '../dist/poses.js';
 import {AttachmentSystem,emptyLinks,worldTransform} from '../dist/attachments.js';
-import {defaults,createSki,createPole} from '../dist/model.js';
+import {defaults,createSki,createPole,replaceModel} from '../dist/model.js';
 import {DEFAULT_SETTINGS,validateScene,upgradeScene,encodeSharedScene,decodeSharedScene,unpackFile,estimatedBytes} from '../dist/scene-data.js';
 
 function setup(){const root=new THREE.Group(),human=new HumanRig(),config={...defaults},settings={...DEFAULT_SETTINGS},gear=[createSki(config),createSki(config),createPole(config,-1),createPole(config,1)];root.add(human,...gear);human.initialized=true;human.visible=true;const links=new AttachmentSystem(gear,human,config,settings);return {root,human,gear,links,config,settings};}
@@ -22,3 +22,4 @@ test('schema rejects invalid joints, quaternions and link names',()=>{const vali
 test('numeric controls at the smallest height still export a valid scene',()=>{const c=setup();c.human.state.height=100;c.human.setTarget('leftHand',new THREE.Vector3(10,1,0));c.human.update();assert.equal(validateScene(snapshot(c)),true);});
 test('shared scene round trip retains the pose and attachments',async()=>{const c=setup();c.human.state=humanPose('carry',188);c.human.update();c.links.align(0,'rightHand',{carry:true});c.links.align(1,'rightHand',{carry:true});const scene=snapshot(c),encoded=await encodeSharedScene(scene,'Лыжи в руках');const decoded=await decodeSharedScene(encoded);assert.equal(decoded.name,'Лыжи в руках');assert.deepEqual(decoded.scene,scene);assert.ok(encoded.length<15000);assert.ok(estimatedBytes(scene)<40000);});
 test('library import validates every scene before returning entries',()=>{const scene=snapshot(setup());const file={format:'ski-form-library',version:1,presets:[{name:'Первая',scene},{name:'Вторая',scene}]};assert.equal(unpackFile(file).entries.length,2);file.presets[1]={name:'Неверная',scene:{}};assert.throws(()=>unpackFile(file));});
+test('lifestyle poses keep gear above the ground, grips reachable and scenes valid',()=>{for(const [skiLength,poleLength] of [[180,150],[210,180],[150,110]])for(const height of [150,175,200])for(const id of Object.keys(LIFESTYLE_LINKS)){const c=setup();Object.assign(c.config,{skiLength,poleLength});c.gear.forEach(g=>replaceModel(g,c.config));c.human.state=humanPose(id,height);c.human.update();placeGear(id,c.human,c.gear,c.links,c.config);const tag=id+' / '+height+' / '+skiLength+'-'+poleLength;assert.deepEqual(c.human.warnings,[],tag+': '+c.human.warnings.join(', '));const box=new THREE.Box3();c.gear.forEach(g=>box.union(new THREE.Box3().setFromObject(g)));assert.ok(box.min.y>-.01,tag+': gear below ground '+box.min.y);assert.deepEqual(c.links.links.map(l=>l.target),LIFESTYLE_LINKS[id],tag);assert.equal(validateScene(snapshot(c)),true);}});

@@ -23,17 +23,22 @@ export class HumanRig extends THREE.Group {
   constructor(){
     super();this.name='Манекен';this.userData={kind:'human',id:4};this.state=defaultHuman();this.initialized=false;this.visible=false;
     this.body=new THREE.Group();this.add(this.body);this.helpers=new THREE.Group();this.helpers.visible=false;this.add(this.helpers);
-    this.materials={body:new THREE.MeshStandardMaterial({color:'#a7b3c2',roughness:.8}),joint:new THREE.MeshStandardMaterial({color:'#778598',roughness:.85}),boot:new THREE.MeshStandardMaterial({color:'#485460',roughness:.85})};
-    this.sphere=new THREE.SphereGeometry(1,20,14);this.cylinder=new THREE.CylinderGeometry(1,1,1,14);
+    this.materials={body:new THREE.MeshStandardMaterial({color:'#b3b1ab',roughness:.82}),joint:new THREE.MeshStandardMaterial({color:'#b3b1ab',roughness:.82}),boot:new THREE.MeshStandardMaterial({color:'#4a4d50',roughness:.8})};
+    this.sphere=new THREE.SphereGeometry(1,24,16);this.cylinder=new THREE.CylinderGeometry(1,1,1,14);
+    const lathe=pts=>new THREE.LatheGeometry(pts.map(([r,u])=>new THREE.Vector2(r,u-.5)),22);
+    this.limbShapes={UpperArm:lathe([[.92,0],[1,.18],[.94,.55],[.8,1]]),Forearm:lathe([[.95,0],[1,.16],[.86,.55],[.68,1]]),Thigh:lathe([[.98,0],[1,.12],[.9,.55],[.7,1]]),Shin:lathe([[.84,0],[1,.22],[.86,.5],[.58,.88],[.56,1]])};
     this.parts={};this.controls={};this.frames={};this.limbs={};this.warnings=[];
-    const labels=['pelvis','waist','chest','neck','head','nose','leftShoulder','rightShoulder','leftHip','rightHip','leftElbow','rightElbow','leftKnee','rightKnee','leftHand','rightHand','leftFoot','rightFoot'];
-    for(const name of labels){const mat=name.includes('Foot')?this.materials.boot:/Elbow|Knee|Shoulder|Hip|neck/.test(name)?this.materials.joint:this.materials.body;const m=new THREE.Mesh(this.sphere,mat);m.castShadow=true;m.receiveShadow=true;m.userData.control=name==='chest'||name==='waist'?'torso':name==='nose'||name==='neck'?'head':name.endsWith('Shoulder')?name.startsWith('left')?'leftHand':'rightHand':name.endsWith('Hip')?'pelvis':name;this.body.add(m);this.parts[name]=m;}
-    for(const name of ['leftUpperArm','leftForearm','rightUpperArm','rightForearm','leftThigh','leftShin','rightThigh','rightShin']){const m=new THREE.Mesh(this.cylinder,this.materials.body);m.castShadow=true;m.receiveShadow=true;m.userData.control=name.includes('Arm')||name.includes('Forearm')?name.startsWith('left')?'leftHand':'rightHand':name.startsWith('left')?'leftFoot':'rightFoot';this.body.add(m);this.parts[name]=m;}
+    const labels=['pelvis','waist','chest','girdle','neck','head','nose','leftThumb','rightThumb','leftSole','rightSole','leftCuff','rightCuff','leftShoulder','rightShoulder','leftHip','rightHip','leftElbow','rightElbow','leftKnee','rightKnee','leftHand','rightHand','leftFoot','rightFoot'];
+    const side=name=>name.startsWith('left')?'left':'right';
+    for(const name of labels){const mat=/Foot|Sole|Cuff|Hand|Thumb/.test(name)?this.materials.boot:/Elbow|Knee|Shoulder|Hip|neck/.test(name)?this.materials.joint:this.materials.body;const m=new THREE.Mesh(this.sphere,mat);m.castShadow=true;m.receiveShadow=true;m.userData.control=['chest','waist','girdle'].includes(name)?'torso':['nose','neck'].includes(name)?'head':name.endsWith('Shoulder')||name.endsWith('Thumb')?side(name)+'Hand':name.endsWith('Sole')||name.endsWith('Cuff')?side(name)+'Foot':name.endsWith('Hip')?'pelvis':name;this.body.add(m);this.parts[name]=m;}
+    // Small overlapping details self-shadow into jagged seams; they only receive light.
+    for(const name of ['nose','leftThumb','rightThumb'])this.parts[name].castShadow=false;
+    for(const name of ['leftUpperArm','leftForearm','rightUpperArm','rightForearm','leftThigh','leftShin','rightThigh','rightShin']){const m=new THREE.Mesh(this.limbShapes[name.replace(/^(left|right)/,'')],this.materials.body);m.castShadow=true;m.receiveShadow=true;m.userData.control=name.includes('Arm')||name.includes('Forearm')?name.startsWith('left')?'leftHand':'rightHand':name.startsWith('left')?'leftFoot':'rightFoot';this.body.add(m);this.parts[name]=m;}
     const colors={pelvis:0xd39836,torso:0xd39836,head:0xd39836,leftHand:0x3d83c6,rightHand:0x3d83c6,leftFoot:0x789344,rightFoot:0x789344,leftElbow:0x969fa8,rightElbow:0x969fa8,leftKnee:0x969fa8,rightKnee:0x969fa8};
     for(const key of Object.keys(CONTROL_NAMES)){const c=new THREE.Group();c.name=CONTROL_NAMES[key];c.userData.control=key;const dot=new THREE.Mesh(new THREE.SphereGeometry(.018,12,8),new THREE.MeshBasicMaterial({color:colors[key],depthTest:false,transparent:true,opacity:.9}));dot.renderOrder=10;dot.userData.control=key;c.add(dot);this.helpers.add(c);this.controls[key]=c;}
     this.update();
   }
-  setTone(tone){const palette=tone==='white'?['#d8dee6','#a1adba','#6b7580']:tone==='graphite'?['#697786','#414f60','#303b47']:['#a7b3c2','#778598','#485460'];Object.values(this.materials).forEach((m,i)=>m.color.set(palette[i]));}
+  setTone(tone){const palette=tone==='white'?['#e4e3de','#e4e3de','#73767a']:tone==='graphite'?['#6d7074','#6d7074','#2f3236']:['#b3b1ab','#b3b1ab','#4a4d50'];Object.values(this.materials).forEach((m,i)=>m.color.set(palette[i]));}
   blob(name,p,size,q=new THREE.Quaternion()){const m=this.parts[name];m.position.copy(p);m.scale.set(...size);m.quaternion.copy(q);}
   segment(name,a,b,r){const m=this.parts[name],d=b.clone().sub(a);m.position.copy(a).add(b).multiplyScalar(.5);m.scale.set(r,d.length(),r);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());}
   target(key){const p=V(this.state.targets[key]),s=this.state.height/175;p.x*=s;p.z*=s;if(!key.includes('Foot'))p.y*=s;return p;}
@@ -42,10 +47,11 @@ export class HumanRig extends THREE.Group {
     const st=this.state,s=st.height/175,pelvis=V(st.pelvis).multiplyScalar(s),pq=Q(st.pelvisRot),tq=pq.clone().multiply(Q(st.torso)),hq=tq.clone().multiply(Q(st.head));this.warnings=[];
     const offset=(x,y,z,q=tq)=>new THREE.Vector3(x*s,y*s,z*s).applyQuaternion(q).add(pelvis);
     this.blob('pelvis',offset(0,.015,0,pq),[.16*s,.115*s,.105*s],pq);
-    this.blob('waist',offset(0,.17,0),[.125*s,.17*s,.09*s],tq);
-    this.blob('chest',offset(0,.30,0),[.19*s,.205*s,.115*s],tq);
-    this.blob('neck',offset(0,.505,0),[.052*s,.075*s,.05*s],tq);
-    const head=offset(0,.655,0);this.blob('head',head,[.097*s,.125*s,.105*s],hq);this.blob('nose',head.clone().add(new THREE.Vector3(0,-.005*s,.099*s).applyQuaternion(hq)),[.013*s,.022*s,.018*s],hq);
+    this.blob('waist',offset(0,.165,.004),[.13*s,.175*s,.095*s],tq);
+    this.blob('chest',offset(0,.31,.006),[.17*s,.19*s,.112*s],tq);
+    this.blob('girdle',offset(0,.425,-.012),[.175*s,.062*s,.085*s],tq);
+    this.blob('neck',offset(0,.5,-.004),[.056*s,.085*s,.054*s],tq);
+    const head=offset(0,.655,0);this.blob('head',head,[.079*s,.112*s,.097*s],hq);this.blob('nose',head.clone().add(new THREE.Vector3(0,-.014*s,.095*s).applyQuaternion(hq)),[.01*s,.019*s,.016*s],hq);
     this.controls.pelvis.position.copy(pelvis);this.controls.pelvis.quaternion.copy(pq);this.controls.torso.position.copy(offset(0,.26,0));this.controls.torso.quaternion.copy(tq);this.controls.head.position.copy(head);this.controls.head.quaternion.copy(hq);
     for(const side of ['left','right']){
       const sign=side==='left'?1:-1,handKey=side+'Hand',footKey=side+'Foot',shoulder=offset(sign*.185,.405,0),hip=offset(sign*.095,0,0,pq);
@@ -53,11 +59,12 @@ export class HumanRig extends THREE.Group {
       const arm=solveTwoBone(shoulder,wrist,.282*s,.255*s,new THREE.Vector3(sign*.45,0,-1).applyQuaternion(tq),st.swivel[handKey]);
       const toe=this.target(footKey),footQ=Q(st.rotations[footKey]),ankle=toe.clone().add(new THREE.Vector3(0,.055*s,-.14*s).applyQuaternion(footQ));
       const leg=solveTwoBone(hip,ankle,.445*s,.435*s,new THREE.Vector3(0,0,1).applyQuaternion(pq),st.swivel[footKey]);
-      this.blob(side+'Shoulder',shoulder,[.068*s,.071*s,.07*s]);this.blob(side+'Hip',hip,[.07*s,.072*s,.07*s]);
-      this.segment(side+'UpperArm',shoulder,arm.joint,.046*s);this.segment(side+'Forearm',arm.joint,arm.end,.038*s);
-      this.blob(side+'Elbow',arm.joint,[.044*s,.044*s,.044*s]);this.blob(handKey,arm.end.clone().add(new THREE.Vector3(0,0,.035*s).applyQuaternion(handQ)),[.041*s,.033*s,.066*s],handQ);
-      this.segment(side+'Thigh',hip,leg.joint,.067*s);this.segment(side+'Shin',leg.joint,leg.end,.047*s);this.blob(side+'Knee',leg.joint,[.058*s,.058*s,.058*s]);
-      this.blob(footKey,leg.end.clone().add(new THREE.Vector3(0,-.025*s,.025*s).applyQuaternion(footQ)),[.055*s,.048*s,.151*s],footQ);
+      this.blob(side+'Shoulder',shoulder,[.058*s,.06*s,.06*s],tq);this.blob(side+'Hip',hip,[.074*s,.08*s,.076*s],pq);
+      this.segment(side+'UpperArm',shoulder,arm.joint,.05*s);this.segment(side+'Forearm',arm.joint,arm.end,.044*s);
+      this.blob(side+'Elbow',arm.joint,[.041*s,.041*s,.041*s]);
+      const palm=arm.end.clone().add(new THREE.Vector3(0,0,.04*s).applyQuaternion(handQ));this.blob(handKey,palm,[.042*s,.031*s,.07*s],handQ);this.blob(side+'Thumb',palm.clone().add(new THREE.Vector3(-sign*.034*s,.012*s,-.012*s).applyQuaternion(handQ)),[.015*s,.014*s,.032*s],handQ.clone().multiply(Q([0,-sign*25,0])));
+      this.segment(side+'Thigh',hip,leg.joint,.078*s);this.segment(side+'Shin',leg.joint,leg.end,.056*s);this.blob(side+'Knee',leg.joint,[.053*s,.053*s,.053*s]);
+      const boot=leg.end.clone().add(new THREE.Vector3(0,-.022*s,.03*s).applyQuaternion(footQ));this.blob(footKey,boot,[.05*s,.042*s,.142*s],footQ);this.blob(side+'Sole',boot.clone().add(new THREE.Vector3(0,-.03*s,.004*s).applyQuaternion(footQ)),[.054*s,.014*s,.152*s],footQ);this.blob(side+'Cuff',leg.end.clone().add(new THREE.Vector3(0,.012*s,0)),[.042*s,.055*s,.046*s],footQ);
       for(const [key,pos,q]of [[handKey,hand,handQ],[footKey,toe,footQ],[side+'Elbow',arm.joint,new THREE.Quaternion()],[side+'Knee',leg.joint,new THREE.Quaternion()]]){this.controls[key].position.copy(pos);this.controls[key].quaternion.copy(q);}
       this.frames[handKey]={position:hand,quaternion:handQ};
       this.frames[footKey]={position:toe,quaternion:Q([0,st.rotations[footKey][1],st.rotations[footKey][2]])};
