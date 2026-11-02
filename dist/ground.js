@@ -4,11 +4,11 @@ export class GroundGuide extends THREE.Group {
   constructor(){
     super();this.name='Земля · опорная плоскость';this.layout='';
     const geometry=new THREE.PlaneGeometry(1,1);geometry.rotateX(-Math.PI/2);
-    this.surface=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:'#e6e9e2',side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1,toneMapped:false}));
+    this.surface=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:'#e9ecf0',side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1,toneMapped:false}));
     this.add(this.surface);
-    this.lines=new THREE.LineSegments(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:'#b2bdab',transparent:true,opacity:.7,toneMapped:false}));
+    this.lines=new THREE.LineSegments(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:'#b9c1cc',transparent:true,opacity:.7,toneMapped:false}));
     this.lines.position.y=.0007;this.add(this.lines);
-    this.border=new THREE.LineLoop(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:'#87997a',toneMapped:false}));
+    this.border=new THREE.LineLoop(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:'#8792a2',toneMapped:false}));
     this.border.position.y=.001;this.add(this.border);
   }
   update(settings){

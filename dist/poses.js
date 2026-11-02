@@ -12,16 +12,21 @@ export const HUMAN_POSES=[
  {id:'skate',name:'Коньковый толчок',hint:'Лыжи под углом'},
  {id:'double',name:'Двойной толчок',hint:'Наклон вперёд'},
  {id:'tuck',name:'Низкая стойка',hint:'Согнутые колени'},
- {id:'carry',name:'Лыжи в руке',hint:'Вертикальный комплект'}
+ {id:'carry',name:'Лыжи в руке',hint:'В шаге, палки в другой руке'},
+ {id:'overhead',name:'Лыжи над головой',hint:'Победный жест'}
 ];
 const SHOULDER_TOP=.065;
 export function humanPose(id,height=175){
   const h=defaultHuman();h.height=height;
+  if(id==='stand'){h.pelvis=[.018,.955,0];h.pelvisRot=[0,-6,3];h.torso=[3,9,-3];h.head=[-4,-18,5];h.targets.leftFoot=[.12,.035,.15];h.targets.rightFoot=[-.115,.035,.07];h.rotations.leftFoot=[0,4,0];h.rotations.rightFoot=[0,-6,0];h.targets.leftHand=[.26,1.04,.17];h.targets.rightHand=[-.24,1.12,.31];}
   if(id==='classic'){h.pelvis=[0,.885,0];h.torso=[16,0,0];h.targets.leftFoot=[.11,.035,.36];h.targets.rightFoot=[-.11,.035,-.35];h.targets.leftHand=[.25,1.15,-.10];h.targets.rightHand=[-.25,.88,.40];h.rotations.rightFoot=[25,0,0];}
   if(id==='skate'){h.pelvis=[0,.86,0];h.torso=[18,0,8];h.targets.leftFoot=[.38,.035,-.12];h.targets.rightFoot=[-.18,.035,.23];h.rotations.leftFoot=[15,24,0];h.rotations.rightFoot=[0,-14,0];h.targets.leftHand=[.31,1.16,.40];h.targets.rightHand=[-.31,1.14,.36];}
   if(id==='double'){h.pelvis=[0,.83,-.04];h.torso=[42,0,0];h.targets.leftHand=[.28,1.1,.64];h.targets.rightHand=[-.28,1.1,.64];}
   if(id==='tuck'){h.pelvis=[0,.68,-.13];h.torso=[45,0,0];h.targets.leftFoot=[.15,.035,.20];h.targets.rightFoot=[-.15,.035,.20];h.targets.leftHand=[.28,.76,.45];h.targets.rightHand=[-.28,.76,.45];}
-  if(id==='carry'){h.targets.leftHand=[.24,1.02,.15];h.targets.rightHand=[-.28,1.05,.12];}
+  // Walking to the track: skis carried at the side, poles swinging in the other hand.
+  if(id==='carry'){h.pelvis=[0,.925,.02];h.pelvisRot=[0,-9,-2];h.torso=[4,11,3];h.head=[-3,26,-3];h.targets.leftFoot=[.1,.035,.29];h.targets.rightFoot=[-.1,.035,-.22];h.rotations.leftFoot=[0,6,0];h.rotations.rightFoot=[28,0,0];h.targets.rightHand=[-.29,.82,.07];h.rotations.rightHand=[0,0,-90];h.targets.leftHand=[.23,.97,.24];h.rotations.leftHand=[-30,0,90];}
+  // Celebration: the set raised overhead, leaning back, one foot kicked up on the toe.
+  if(id==='overhead'){h.pelvis=[0,.95,.02];h.pelvisRot=[0,6,3];h.torso=[-11,-6,-2];h.head=[-20,-8,4];h.targets.leftFoot=[.13,.035,.08];h.targets.rightFoot=[-.12,.035,-.16];h.rotations.rightFoot=[34,-8,0];h.targets.leftHand=[.3,1.8,.04];h.targets.rightHand=[-.3,1.74,.04];h.rotations.leftHand=[90,0,0];h.rotations.rightHand=[90,0,0];}
   // Weight on the left leg, hip lifted, right hand resting on vertical skis.
   if(id==='lean'){h.pelvis=[.035,.95,0];h.pelvisRot=[0,-10,5];h.torso=[2,14,-8];h.head=[-4,-22,7];h.targets.leftFoot=[.09,.035,.08];h.targets.rightFoot=[-.2,.035,.17];h.rotations.leftFoot=[0,8,0];h.rotations.rightFoot=[12,-22,0];h.swivel.rightFoot=-10;h.targets.rightHand=[-.27,1.38,.12];h.rotations.rightHand=[0,-70,-90];h.swivel.rightHand=35;h.targets.leftHand=[.2,.99,-.04];h.rotations.leftHand=[0,90,-20];h.swivel.leftHand=-70;}
   // Walking with the skis and poles on the right shoulder, glancing toward the camera.
@@ -68,6 +73,20 @@ function lifestyleGear(id,human,config){
     hands.leftHand=at(1.3).add(v(.05,0,-.01));hands.rightHand=at(1.02).add(v(-.05,0,-.01));
     for(const dx of [-.075,-.095]){const pb=v(-.2*s+dx,.003,.34*s),pc=pb.clone().addScaledVector(along,P/2);out.push({position:pc,quaternion:orient(along,v(0,0,1))});}
   }
+  if(id==='carry'){
+    const along=v(0,Math.sin(9*Math.PI/180),Math.cos(9*Math.PI/180)),lift=up.clone().addScaledVector(along,-along.y).normalize(),hand=v(-.29*s,.82*s,.07*s);
+    hands.rightHand=hand;
+    out.push(...skiPair(hand.clone().add(v(-.03*s,0,0)).addScaledVector(lift,-(config.skiWidth/200+.012)).addScaledVector(along,.06),along,v(1,0,0)));
+    const lh=v(.23*s,.97*s,.24*s),ay=Math.min(.5,(lh.y-.06)/(P-.07)),pa=v(0,ay,Math.sqrt(1-ay*ay));hands.leftHand=lh;
+    for(const dx of [-.009,.009]){const g=lh.clone().add(v(.012+dx,0,0));out.push({position:g.addScaledVector(pa,-grip),quaternion:orient(pa,v(1,0,0))});}
+  }
+  if(id==='overhead'){
+    const t=8*Math.PI/180,along=v(Math.cos(t),Math.sin(t),0),lift=up.clone().addScaledVector(along,-along.y).normalize(),c=v(0,1.8*s,0);
+    out.push(...skiPair(c,along,v(0,0,1)));
+    const grip=w=>c.clone().addScaledVector(along,w*.27*s).addScaledVector(lift,-(config.skiWidth/200+.016));
+    hands.leftHand=grip(1);hands.rightHand=grip(-1);
+    for(const dz of [.02,.034]){const pc=c.clone().add(v(0,.012,dz));out.push({position:pc,quaternion:orient(dz<.03?along:along.clone().negate(),v(0,0,1))});}
+  }
   if(id==='yoke'||id==='rest'){
     out.push(null,null); // skis stay on the feet
     if(id==='yoke'){const mid=shoulder('left').add(shoulder('right')).multiplyScalar(.5),y=mid.y+(SHOULDER_TOP+.02)*s,z=mid.z-.075*s;for(const [side,dz,dy] of [[1,0,0],[-1,-.004,.022]]){const c=v(-side*.06*s,y+dy,z+dz);out.push({position:c,quaternion:orient(v(side,0,0),v(0,0,1))});}hands.leftHand=v(.45*s,y+.045,z+.005);hands.rightHand=v(-.45*s,y+.065,z+.005);}
@@ -78,13 +97,12 @@ function lifestyleGear(id,human,config){
 // Elbow direction preferences: hanging down and slightly out, or akimbo (out and back).
 const ELBOWS={lean:{leftHand:'akimbo'}};
 function relaxElbow(human,key,mode){const sign=key.startsWith('left')?1:-1,prefer=mode==='akimbo'?v(sign,-.25,-.7):v(sign*.35,-1,-.12);prefer.normalize();let best=0,score=-Infinity;for(let a=-180;a<=180;a+=5){human.state.swivel[key]=a;human.update();const l=human.limbs[key],d=l.joint.clone().sub(l.start).normalize().dot(prefer);if(d>score){score=d;best=a;}}human.state.swivel[key]=best;human.update();}
-export const LIFESTYLE_LINKS={lean:['rightHand','rightHand','rightHand','rightHand'],shoulder:['rightHand','rightHand','rightHand','rightHand'],hug:['leftHand','leftHand','rightHand','rightHand'],yoke:['leftFoot','rightFoot','leftHand','rightHand'],rest:['leftFoot','rightFoot','leftHand','rightHand']};
+export const LIFESTYLE_LINKS={carry:['rightHand','rightHand','leftHand','leftHand'],overhead:['rightHand','rightHand','leftHand','leftHand'],lean:['rightHand','rightHand','rightHand','rightHand'],shoulder:['rightHand','rightHand','rightHand','rightHand'],hug:['leftHand','leftHand','rightHand','rightHand'],yoke:['leftFoot','rightFoot','leftHand','rightHand'],rest:['leftFoot','rightFoot','leftHand','rightHand']};
 
 /** Applies the pose's equipment layout: grasped gear follows the hand, worn skis follow the feet. */
 export function placeGear(id,human,gear,attachments,config){
   attachments.links=emptyLinks();human.update();
   const al=(i,t,o)=>attachments.align(i,t,o);
-  if(id==='carry'){al(0,'rightHand',{carry:true});al(1,'rightHand',{carry:true});al(2,'leftHand',{carry:true});al(3,'leftHand',{carry:true});return;}
   if(!LIFESTYLE_LINKS[id]){al(0,'leftFoot');al(1,'rightFoot');al(2,'leftHand',{plant:id!=='tuck'});al(3,'rightHand',{plant:id!=='tuck'});return;}
   const {gear:layout,hands}=lifestyleGear(id,human,config);
   for(const [key,p] of Object.entries(hands))human.setTarget(key,p);human.update();for(const key of ['leftHand','rightHand'])relaxElbow(human,key,ELBOWS[id]?.[key]);
