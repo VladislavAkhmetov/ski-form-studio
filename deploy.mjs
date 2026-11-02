@@ -50,7 +50,7 @@ for (const file of files) {
   const mimeType = getMimeType(file);
   const s3Uri = `s3://${bucketName}/${relativePath}`;
   const isHtml = relativePath.endsWith('.html');
-  const cacheControl = isHtml ? 'no-cache, no-store, must-revalidate' : 'public, max-age=86400';
+  const cacheControl = isHtml ? 'no-cache, no-store, must-revalidate' : 'no-cache, must-revalidate';
 
   console.log(`Uploading ${relativePath} -> ${s3Uri} (${mimeType})`);
   const cmd = `yc storage s3 cp "${file}" "${s3Uri}" --content-type "${mimeType}" --cache-control "${cacheControl}" --profile "${profile}"`;
