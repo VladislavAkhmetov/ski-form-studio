@@ -19,6 +19,18 @@ export function solveTwoBone(start,target,a,b,preferred,swivel=0){
   return {joint,end,limited:Math.abs(requested-distance)>.012,bend:180-Math.acos(THREE.MathUtils.clamp((a*a+b*b-distance*distance)/(2*a*b),-1,1))/D};
 }
 
+export function limbBasis(start,target,joint){
+  const delta=target.clone().sub(start),len=delta.length(),axis=len>1e-7?delta.multiplyScalar(1/len):new THREE.Vector3(0,-1,0);
+  let r=joint.clone().sub(start);
+  r.addScaledVector(axis,-r.dot(axis));
+  const radius=r.length();
+  let radial=radius>1e-4?r.clone().multiplyScalar(1/radius):new THREE.Vector3(0,0,1).addScaledVector(axis,-axis.z).normalize();
+  if(radial.lengthSq()<1e-4)radial=new THREE.Vector3(1,0,0);
+  const tangent=axis.clone().cross(radial).normalize();
+  const m=new THREE.Matrix4().makeBasis(tangent,radial,axis.clone().negate());
+  return {q:new THREE.Quaternion().setFromRotationMatrix(m),tangent,radius:Math.max(radius,.05)};
+}
+
 export class HumanRig extends THREE.Group {
   constructor(){
     super();this.name='Манекен';this.userData={kind:'human',id:4};this.state=defaultHuman();this.initialized=false;this.visible=false;
@@ -65,7 +77,8 @@ export class HumanRig extends THREE.Group {
       const palm=arm.end.clone().add(new THREE.Vector3(0,0,.04*s).applyQuaternion(handQ));this.blob(handKey,palm,[.042*s,.031*s,.07*s],handQ);this.blob(side+'Thumb',palm.clone().add(new THREE.Vector3(-sign*.034*s,.012*s,-.012*s).applyQuaternion(handQ)),[.015*s,.014*s,.032*s],handQ.clone().multiply(Q([0,-sign*25,0])));
       this.segment(side+'Thigh',hip,leg.joint,.078*s);this.segment(side+'Shin',leg.joint,leg.end,.056*s);this.blob(side+'Knee',leg.joint,[.053*s,.053*s,.053*s]);
       const boot=leg.end.clone().add(new THREE.Vector3(0,-.022*s,.03*s).applyQuaternion(footQ));this.blob(footKey,boot,[.05*s,.042*s,.142*s],footQ);this.blob(side+'Sole',boot.clone().add(new THREE.Vector3(0,-.03*s,.004*s).applyQuaternion(footQ)),[.054*s,.014*s,.152*s],footQ);this.blob(side+'Cuff',leg.end.clone().add(new THREE.Vector3(0,.012*s,0)),[.042*s,.055*s,.046*s],footQ);
-      for(const [key,pos,q]of [[handKey,hand,handQ],[footKey,toe,footQ],[side+'Elbow',arm.joint,new THREE.Quaternion()],[side+'Knee',leg.joint,new THREE.Quaternion()]]){this.controls[key].position.copy(pos);this.controls[key].quaternion.copy(q);}
+      const armBasis=limbBasis(shoulder,wrist,arm.joint),legBasis=limbBasis(hip,ankle,leg.joint);
+      for(const [key,pos,q]of [[handKey,hand,handQ],[footKey,toe,footQ],[side+'Elbow',arm.joint,armBasis.q],[side+'Knee',leg.joint,legBasis.q]]){this.controls[key].position.copy(pos);this.controls[key].quaternion.copy(q);}
       this.frames[handKey]={position:hand,quaternion:handQ};
       this.frames[footKey]={position:toe,quaternion:Q([0,st.rotations[footKey][1],st.rotations[footKey][2]])};
       this.limbs[handKey]={...arm,start:shoulder,target:wrist,a:.282*s,b:.255*s};this.limbs[footKey]={...leg,start:hip,target:ankle,a:.445*s,b:.435*s};
@@ -82,7 +95,14 @@ export class HumanRig extends THREE.Group {
       const base=key==='torso'?Q(st.pelvisRot):Q(st.pelvisRot).multiply(Q(st.torso));const local=base.invert().multiply(node.quaternion);const e=new THREE.Euler().setFromQuaternion(local);st[key]=[e.x/D,e.y/D,e.z/D];
     }else if(TARGETS.includes(key)){this.setTarget(key,node.position);st.rotations[key]=[node.rotation.x/D,node.rotation.y/D,node.rotation.z/D];}
     else{
-      const targetKey=key.replace('Elbow','Hand').replace('Knee','Foot'),limb=this.limbs[targetKey],axis=limb.target.clone().sub(limb.start).normalize();const desired=node.position.clone().sub(limb.start),previous=limb.joint.clone().sub(limb.start);desired.addScaledVector(axis,-desired.dot(axis));previous.addScaledVector(axis,-previous.dot(axis));if(desired.lengthSq()>1e-8&&previous.lengthSq()>1e-8){desired.normalize();previous.normalize();const angle=Math.atan2(axis.dot(previous.clone().cross(desired)),previous.dot(desired))/D;st.swivel[targetKey]=THREE.MathUtils.clamp(st.swivel[targetKey]+angle,-180,180);}
+      const targetKey=key.replace('Elbow','Hand').replace('Knee','Foot'),limb=this.limbs[targetKey];
+      const basis=limbBasis(limb.start,limb.target,limb.joint);
+      const delta=node.position.clone().sub(limb.joint);
+      const dX=delta.dot(basis.tangent);
+      const dAngle=(dX/basis.radius)/D;
+      if(Math.abs(dAngle)>1e-5){
+        st.swivel[targetKey]=THREE.MathUtils.clamp(st.swivel[targetKey]+dAngle,-180,180);
+      }
     }
     this.update();
   }

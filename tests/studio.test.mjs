@@ -22,4 +22,39 @@ test('schema rejects invalid joints, quaternions and link names',()=>{const vali
 test('numeric controls at the smallest height still export a valid scene',()=>{const c=setup();c.human.state.height=100;c.human.setTarget('leftHand',new THREE.Vector3(10,1,0));c.human.update();assert.equal(validateScene(snapshot(c)),true);});
 test('shared scene round trip retains the pose and attachments',async()=>{const c=setup();c.human.state=humanPose('carry',188);c.human.update();c.links.align(0,'rightHand',{carry:true});c.links.align(1,'rightHand',{carry:true});const scene=snapshot(c),encoded=await encodeSharedScene(scene,'Лыжи в руках');const decoded=await decodeSharedScene(encoded);assert.equal(decoded.name,'Лыжи в руках');assert.deepEqual(decoded.scene,scene);assert.ok(encoded.length<15000);assert.ok(estimatedBytes(scene)<40000);});
 test('library import validates every scene before returning entries',()=>{const scene=snapshot(setup());const file={format:'ski-form-library',version:1,presets:[{name:'Первая',scene},{name:'Вторая',scene}]};assert.equal(unpackFile(file).entries.length,2);file.presets[1]={name:'Неверная',scene:{}};assert.throws(()=>unpackFile(file));});
+test('human poses are categorized into groups including classic and skate with valid scenes',()=>{
+  const classic=HUMAN_POSES.filter(p=>p.group==='classic');
+  const skate=HUMAN_POSES.filter(p=>p.group==='skate');
+  assert.ok(classic.length>=4,'Classic group has at least 4 presets');
+  assert.ok(skate.length>=4,'Skate group has at least 4 presets');
+  for(const p of HUMAN_POSES){
+    assert.ok(['classic','skate','stances','lifestyle'].includes(p.group),`Pose ${p.id} has recognized group`);
+    const c=setup();
+    c.human.state=humanPose(p.id,175);
+    c.human.update();
+    placeGear(p.id,c.human,c.gear,c.links,c.config);
+    const scene=snapshot(c);
+    scene.poseId=p.id;
+    scene.label=p.name;
+    assert.equal(validateScene(scene),true,`Scene for ${p.id} is valid`);
+    const right=new THREE.Vector3(3,0,-2).normalize(),P=v=>[v.dot(right),-v.y],pts=[];
+    c.gear.forEach((g,i)=>{g.updateMatrixWorld(true);const half=(i<2?c.config.skiLength:c.config.poleLength)/200;pts.push(P(new THREE.Vector3(0,0,-half).applyMatrix4(g.matrixWorld)),P(new THREE.Vector3(0,0,half).applyMatrix4(g.matrixWorld)));});
+    for(const pt of pts){assert.ok(!Number.isNaN(pt[0])&&!Number.isNaN(pt[1]),`Point in pose ${p.id} is finite`);}
+  }
+});
 test('lifestyle poses keep gear above the ground, grips reachable and scenes valid',()=>{for(const [skiLength,poleLength] of [[180,150],[210,180],[150,110]])for(const height of [150,175,200])for(const id of Object.keys(LIFESTYLE_LINKS)){const c=setup();Object.assign(c.config,{skiLength,poleLength});c.gear.forEach(g=>replaceModel(g,c.config));c.human.state=humanPose(id,height);c.human.update();placeGear(id,c.human,c.gear,c.links,c.config);const tag=id+' / '+height+' / '+skiLength+'-'+poleLength;assert.deepEqual(c.human.warnings,[],tag+': '+c.human.warnings.join(', '));const box=new THREE.Box3();c.gear.forEach(g=>box.union(new THREE.Box3().setFromObject(g)));assert.ok(box.min.y>-.01,tag+': gear below ground '+box.min.y);assert.deepEqual(c.links.links.map(l=>l.target),LIFESTYLE_LINKS[id],tag);assert.equal(validateScene(snapshot(c)),true);}});
+test('dragging elbow or knee along tangent translates joint along arrow and rotates swivel',()=>{
+  const {human}=setup();
+  human.state=humanPose('skate',175);
+  human.update();
+  for(const part of ['leftElbow','rightElbow','leftKnee','rightKnee']){
+    const start=human.controls[part].position.clone(),q=human.controls[part].quaternion.clone();
+    const offset=new THREE.Vector3(.05,0,0).applyQuaternion(q);
+    human.controls[part].position.add(offset);
+    human.applyControl(part,false);
+    const end=human.controls[part].position.clone(),movement=end.clone().sub(start);
+    const angleErr=Math.acos(movement.clone().normalize().dot(offset.clone().normalize()))*180/Math.PI;
+    assert.ok(Math.abs(movement.length()-.05)<.005,`${part} moved ~5cm: ${movement.length()}`);
+    assert.ok(angleErr<10,`${part} followed arrow direction: error ${angleErr}°`);
+  }
+});

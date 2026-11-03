@@ -1,1 +1,1 @@
-import './studio.js?v=5';
+import './studio.js?v=6';
