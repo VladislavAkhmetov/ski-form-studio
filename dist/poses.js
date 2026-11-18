@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import {defaultHuman} from './human.js?v=6';
-import {emptyLinks,setWorldTransform} from './attachments.js?v=6';
+import {defaultHuman} from './human.js?v=8';
+import {emptyLinks,setWorldTransform} from './attachments.js?v=8';
 export const HUMAN_POSES=[
  {id:'classic',name:'Классический шаг',hint:'Попеременный двухшажный',group:'classic'},
  {id:'double',name:'Одновременный бесшажный',hint:'Даблполинг, наклон вперёд',group:'classic'},
@@ -26,11 +26,11 @@ export const HUMAN_POSES=[
 const SHOULDER_TOP=.065;
 export function humanPose(id,height=175){
   const h=defaultHuman();h.height=height;
-  if(id==='stand'){h.pelvis=[.018,.955,0];h.pelvisRot=[0,-6,3];h.torso=[3,9,-3];h.head=[-4,-18,5];h.targets.leftFoot=[.12,.035,.15];h.targets.rightFoot=[-.115,.035,.07];h.rotations.leftFoot=[0,4,0];h.rotations.rightFoot=[0,-6,0];h.targets.leftHand=[.26,1.04,.17];h.targets.rightHand=[-.24,1.12,.31];}
+  if(id==='stand'){h.pelvis=[.018,.955,0];h.pelvisRot=[0,-6,3];h.torso=[3,9,-3];h.neck=[-4,-18,5];h.targets.leftFoot=[.12,.035,.15];h.targets.rightFoot=[-.115,.035,.07];h.rotations.leftFoot=[0,4,0];h.rotations.rightFoot=[0,-6,0];h.targets.leftHand=[.26,1.04,.17];h.targets.rightHand=[-.24,1.12,.31];}
   if(id==='classic'){h.pelvis=[0,.885,0];h.torso=[16,0,0];h.targets.leftFoot=[.11,.035,.36];h.targets.rightFoot=[-.11,.035,-.35];h.targets.leftHand=[.25,1.15,-.10];h.targets.rightHand=[-.25,.88,.40];h.rotations.rightFoot=[25,0,0];}
   if(id==='double'){h.pelvis=[0,.83,-.04];h.torso=[42,0,0];h.targets.leftHand=[.28,1.1,.64];h.targets.rightHand=[-.28,1.1,.64];}
   if(id==='classic_kick'){h.pelvis=[0,.85,-.02];h.torso=[24,0,0];h.targets.leftFoot=[.11,.035,.28];h.targets.rightFoot=[-.11,.035,-.36];h.rotations.rightFoot=[28,0,0];h.targets.leftHand=[.24,1.15,.45];h.targets.rightHand=[-.24,1.15,.45];}
-  if(id==='classic_glide'){h.pelvis=[.04,.88,0];h.torso=[18,0,-4];h.head=[-8,0,0];h.targets.leftFoot=[.08,.035,.15];h.targets.rightFoot=[-.08,.18,-.45];h.rotations.rightFoot=[25,0,0];h.targets.leftHand=[.22,1.05,.25];h.targets.rightHand=[-.22,1.08,.30];}
+  if(id==='classic_glide'){h.pelvis=[.04,.88,0];h.torso=[18,0,-4];h.neck=[-8,0,0];h.targets.leftFoot=[.08,.035,.15];h.targets.rightFoot=[-.08,.18,-.45];h.rotations.rightFoot=[25,0,0];h.targets.leftHand=[.22,1.05,.25];h.targets.rightHand=[-.22,1.08,.30];}
   if(id==='herringbone'){h.pelvis=[0,.86,0];h.torso=[22,0,0];h.targets.leftFoot=[.18,.035,.22];h.targets.rightFoot=[-.18,.035,-.22];h.rotations.leftFoot=[0,22,0];h.rotations.rightFoot=[26,-22,0];h.targets.leftHand=[.32,1.08,-.05];h.targets.rightHand=[-.32,1.15,.25];}
   if(id==='skate'){h.pelvis=[0,.86,0];h.torso=[18,0,8];h.targets.leftFoot=[.38,.035,-.12];h.targets.rightFoot=[-.18,.035,.23];h.rotations.leftFoot=[15,24,0];h.rotations.rightFoot=[0,-14,0];h.targets.leftHand=[.31,1.16,.40];h.targets.rightHand=[-.31,1.14,.36];}
   if(id==='skate_v1'){h.pelvis=[-.03,.85,0];h.torso=[20,-4,6];h.targets.leftFoot=[.32,.035,-.16];h.targets.rightFoot=[-.15,.035,.24];h.rotations.leftFoot=[10,20,0];h.rotations.rightFoot=[0,-15,0];h.targets.leftHand=[.30,1.05,.28];h.targets.rightHand=[-.28,1.18,.42];}
@@ -40,19 +40,19 @@ export function humanPose(id,height=175){
   if(id==='finish_lunge'){h.pelvis=[0,.76,-.05];h.torso=[34,0,0];h.targets.leftFoot=[.12,.035,.46];h.targets.rightFoot=[-.12,.035,-.44];h.rotations.rightFoot=[36,0,0];h.targets.leftHand=[.26,.96,-.28];h.targets.rightHand=[-.26,.96,-.28];h.rotations.leftHand=[-40,0,0];h.rotations.rightHand=[-40,0,0];}
   if(id==='tuck'){h.pelvis=[0,.68,-.13];h.torso=[45,0,0];h.targets.leftFoot=[.15,.035,.20];h.targets.rightFoot=[-.15,.035,.20];h.targets.leftHand=[.28,.76,.45];h.targets.rightHand=[-.28,.76,.45];}
   // Walking to the track: skis carried at the side, poles swinging in the other hand.
-  if(id==='carry'){h.pelvis=[0,.925,.02];h.pelvisRot=[0,-9,-2];h.torso=[4,11,3];h.head=[-3,26,-3];h.targets.leftFoot=[.1,.035,.29];h.targets.rightFoot=[-.1,.035,-.22];h.rotations.leftFoot=[0,6,0];h.rotations.rightFoot=[28,0,0];h.targets.rightHand=[-.29,.82,.07];h.rotations.rightHand=[0,0,-90];h.targets.leftHand=[.23,.97,.24];h.rotations.leftHand=[-30,0,90];}
+  if(id==='carry'){h.pelvis=[0,.925,.02];h.pelvisRot=[0,-9,-2];h.torso=[4,11,3];h.neck=[-3,26,-3];h.targets.leftFoot=[.1,.035,.29];h.targets.rightFoot=[-.1,.035,-.22];h.rotations.leftFoot=[0,6,0];h.rotations.rightFoot=[28,0,0];h.targets.rightHand=[-.29,.82,.07];h.rotations.rightHand=[0,0,-90];h.targets.leftHand=[.23,.97,.24];h.rotations.leftHand=[-30,0,90];}
   // Celebration: the set raised overhead, leaning back, one foot kicked up on the toe.
-  if(id==='overhead'){h.pelvis=[0,.95,.02];h.pelvisRot=[0,6,3];h.torso=[-11,-6,-2];h.head=[-20,-8,4];h.targets.leftFoot=[.13,.035,.08];h.targets.rightFoot=[-.12,.035,-.16];h.rotations.rightFoot=[34,-8,0];h.targets.leftHand=[.3,1.8,.04];h.targets.rightHand=[-.3,1.74,.04];h.rotations.leftHand=[90,0,0];h.rotations.rightHand=[90,0,0];}
+  if(id==='overhead'){h.pelvis=[0,.95,.02];h.pelvisRot=[0,6,3];h.torso=[-11,-6,-2];h.neck=[-20,-8,4];h.targets.leftFoot=[.13,.035,.08];h.targets.rightFoot=[-.12,.035,-.16];h.rotations.rightFoot=[34,-8,0];h.targets.leftHand=[.3,1.8,.04];h.targets.rightHand=[-.3,1.74,.04];h.rotations.leftHand=[90,0,0];h.rotations.rightHand=[90,0,0];}
   // Weight on the left leg, hip lifted, right hand resting on vertical skis.
-  if(id==='lean'){h.pelvis=[.035,.95,0];h.pelvisRot=[0,-10,5];h.torso=[2,14,-8];h.head=[-4,-22,7];h.targets.leftFoot=[.09,.035,.08];h.targets.rightFoot=[-.2,.035,.17];h.rotations.leftFoot=[0,8,0];h.rotations.rightFoot=[12,-22,0];h.swivel.rightFoot=-10;h.targets.rightHand=[-.27,1.38,.12];h.rotations.rightHand=[0,-70,-90];h.swivel.rightHand=35;h.targets.leftHand=[.2,.99,-.04];h.rotations.leftHand=[0,90,-20];h.swivel.leftHand=-70;}
+  if(id==='lean'){h.pelvis=[.035,.95,0];h.pelvisRot=[0,-10,5];h.torso=[2,14,-8];h.neck=[-4,-22,7];h.targets.leftFoot=[.09,.035,.08];h.targets.rightFoot=[-.2,.035,.17];h.rotations.leftFoot=[0,8,0];h.rotations.rightFoot=[12,-22,0];h.swivel.rightFoot=-10;h.targets.rightHand=[-.27,1.38,.12];h.rotations.rightHand=[0,-70,-90];h.swivel.rightHand=35;h.targets.leftHand=[.2,.99,-.04];h.rotations.leftHand=[0,90,-20];h.swivel.leftHand=-70;}
   // Walking with the skis and poles on the right shoulder, glancing toward the camera.
-  if(id==='shoulder'){h.pelvis=[0,.93,.02];h.pelvisRot=[0,8,0];h.torso=[3,-10,-2];h.head=[-3,24,2];h.targets.leftFoot=[.1,.035,.3];h.targets.rightFoot=[-.11,.035,-.2];h.rotations.rightFoot=[24,0,0];h.targets.leftHand=[.23,.87,-.1];h.rotations.leftHand=[-10,0,0];h.targets.rightHand=[-.24,1.32,.3];h.rotations.rightHand=[0,0,-90];h.swivel.rightHand=60;}
+  if(id==='shoulder'){h.pelvis=[0,.93,.02];h.pelvisRot=[0,8,0];h.torso=[3,-10,-2];h.neck=[-3,24,2];h.targets.leftFoot=[.1,.035,.3];h.targets.rightFoot=[-.11,.035,-.2];h.rotations.rightFoot=[24,0,0];h.targets.leftHand=[.23,.87,-.1];h.rotations.leftHand=[-10,0,0];h.targets.rightHand=[-.24,1.32,.3];h.rotations.rightHand=[0,0,-90];h.swivel.rightHand=60;}
   // Skis standing in front, held with both hands, relaxed weight shift.
-  if(id==='hug'){h.pelvis=[-.025,.95,-.02];h.pelvisRot=[0,6,-4];h.torso=[4,-6,5];h.head=[-2,8,-8];h.targets.leftFoot=[.16,.035,.14];h.targets.rightFoot=[-.09,.035,.05];h.rotations.leftFoot=[8,18,0];h.targets.leftHand=[-.06,1.38,.3];h.rotations.leftHand=[0,-90,90];h.targets.rightHand=[-.15,1.12,.3];h.rotations.rightHand=[0,90,-90];h.swivel.rightHand=30;h.swivel.leftHand=-30;}
+  if(id==='hug'){h.pelvis=[-.025,.95,-.02];h.pelvisRot=[0,6,-4];h.torso=[4,-6,5];h.neck=[-2,8,-8];h.targets.leftFoot=[.16,.035,.14];h.targets.rightFoot=[-.09,.035,.05];h.rotations.leftFoot=[8,18,0];h.targets.leftHand=[-.06,1.38,.3];h.rotations.leftHand=[0,-90,90];h.targets.rightHand=[-.15,1.12,.3];h.rotations.rightHand=[0,90,-90];h.swivel.rightHand=30;h.swivel.leftHand=-30;}
   // On skis, poles across the shoulders behind the neck, wrists draped over them.
-  if(id==='yoke'){h.pelvis=[0,.955,0];h.pelvisRot=[0,0,2];h.torso=[-5,4,-2];h.head=[-10,-12,4];h.targets.leftFoot=[.13,.035,.1];h.targets.rightFoot=[-.13,.035,.06];h.targets.leftHand=[.45,1.48,-.05];h.rotations.leftHand=[0,0,90];h.targets.rightHand=[-.45,1.48,-.05];h.rotations.rightHand=[0,0,-90];h.swivel.leftHand=-60;h.swivel.rightHand=60;}
+  if(id==='yoke'){h.pelvis=[0,.955,0];h.pelvisRot=[0,0,2];h.torso=[-5,4,-2];h.neck=[-10,-12,4];h.targets.leftFoot=[.13,.035,.1];h.targets.rightFoot=[-.13,.035,.06];h.targets.leftHand=[.45,1.48,-.05];h.rotations.leftHand=[0,0,90];h.targets.rightHand=[-.45,1.48,-.05];h.rotations.rightHand=[0,0,-90];h.swivel.leftHand=-60;h.swivel.rightHand=60;}
   // On skis, leaning on both poles planted in front, hands stacked on the grips.
-  if(id==='rest'){h.pelvis=[0,.93,-.03];h.torso=[9,0,0];h.head=[-12,0,0];h.targets.leftFoot=[.12,.035,.1];h.targets.rightFoot=[-.12,.035,.04];h.targets.leftHand=[.04,1.27,.36];h.rotations.leftHand=[90,0,0];h.targets.rightHand=[-.04,1.22,.36];h.rotations.rightHand=[90,0,0];h.swivel.leftHand=-40;h.swivel.rightHand=40;}
+  if(id==='rest'){h.pelvis=[0,.93,-.03];h.torso=[9,0,0];h.neck=[-12,0,0];h.targets.leftFoot=[.12,.035,.1];h.targets.rightFoot=[-.12,.035,.04];h.targets.leftHand=[.04,1.27,.36];h.rotations.leftHand=[90,0,0];h.targets.rightHand=[-.04,1.22,.36];h.rotations.rightHand=[90,0,0];h.swivel.leftHand=-40;h.swivel.rightHand=40;}
   return h;
 }
 

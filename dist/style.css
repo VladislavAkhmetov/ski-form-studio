@@ -35,9 +35,25 @@ dialog{border-radius:16px;border-color:var(--line-strong)}.dialog-close{display:
 .header-actions .button{white-space:nowrap}@media(pointer:coarse){.kbd-only{display:none}}@media(max-width:450px){.header-actions #shareBtn{font-size:0;gap:0;padding:7px 9px}}
 
 /* ===== Layout v3: grouped panels, floating stage controls ===== */
-.doc-title{display:flex;flex-direction:column;gap:3px;min-width:0;padding-left:20px;border-left:1px solid var(--line)}
-.doc-title #compositionLabel{font-size:14.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px;letter-spacing:-.2px}
+.doc-title{display:flex;flex-direction:column;gap:3px;min-width:0;padding-left:18px;border-left:1px solid var(--line)}
+.doc-title-row{display:flex;align-items:center;min-width:0}
+.doc-title-btn{display:inline-flex;align-items:center;gap:6px;padding:3px 7px;margin-left:-7px;border-radius:7px;font-size:14.5px;font-weight:600;color:var(--ink);letter-spacing:-.2px;background:none;border:1px solid transparent;cursor:pointer;text-align:left;max-width:340px;transition:background .15s,border-color .15s}
+.doc-title-btn:hover{background:var(--fill);border-color:var(--line-strong)}
+.doc-title-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.doc-title-btn #compositionLabelText{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block}
+.doc-edit-icon{width:13px;height:13px;color:#8a93a3;opacity:.65;flex-shrink:0;transition:opacity .15s,color .15s}
+.doc-title-btn:hover .doc-edit-icon{opacity:1;color:var(--accent)}
+.doc-title-input{font-size:14.5px;font-weight:600;color:var(--ink);letter-spacing:-.2px;padding:3px 7px;margin-left:-7px;border-radius:7px;border:1px solid var(--accent);background:#fff;outline:0;box-shadow:0 0 0 2px var(--accent-soft);max-width:320px;width:240px}
+.doc-status-row{display:flex;align-items:center;gap:9px}
 .doc-title .save-status{font-size:11.5px;margin:0}
+.doc-save-preset-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:5px;font-size:11px;font-weight:600;color:var(--accent-ink);background:var(--accent-soft);border:0;cursor:pointer;transition:background .15s,transform .1s,color .15s}
+.doc-save-preset-chip:hover{background:#d5e5f8}
+.doc-save-preset-chip:active{transform:translateY(1px)}
+.doc-save-preset-chip svg{width:11px;height:11px;stroke-width:2}
+.doc-save-preset-chip[data-state=saved]{background:transparent;color:var(--muted);cursor:default}
+.doc-save-preset-chip[data-state=saved]:hover{background:transparent}
+.doc-save-preset-chip[data-state=dirty]{background:#fdf2d8;color:#8f650b}
+.doc-save-preset-chip[data-state=dirty]:hover{background:#fae7be}
 /* Left panel */
 .panel-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 12px}
 .left-panel .panel-heading h1,.left-panel .panel-heading h2,.left-panel .objects-section>summary{font-size:11.5px;font-weight:650;letter-spacing:.07em;text-transform:uppercase;color:#5f6778;margin:0}
@@ -104,7 +120,7 @@ dialog{border-radius:16px;border-color:var(--line-strong)}.dialog-close{display:
 .right-panel .inspector-tabs{height:auto;padding:8px 10px}
 .right-panel .inspector-tabs button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px 6px;font-size:11.5px}
 .right-panel .inspector-tabs button svg{width:18px;height:18px}
-@media(max-width:1100px){.view-dock .camera-views button,.view-dock .projection-button{padding:0 7px;font-size:11.5px}.view-dock #renderSize{display:none}.doc-title #compositionLabel{max-width:200px}}
+@media(max-width:1100px){.view-dock .camera-views button,.view-dock .projection-button{padding:0 7px;font-size:11.5px}.view-dock #renderSize{display:none}.doc-title .doc-title-btn,.doc-title-input{max-width:180px}}
 @media(max-width:850px){.doc-title{display:none}.left-panel .library{grid-column:2}.studio .stage{padding-bottom:66px}}
 @media(max-width:450px){.view-dock .camera-views button{padding:0 6px}.composition-switches .comp-chip{min-height:64px;padding:8px 2px}.comp-icon{height:26px}.comp-icon svg{height:26px}}
 @media(max-width:1100px) and (min-width:851px){.workspace{grid-template-columns:244px minmax(230px,1fr) 285px}#editHuman.text-button{display:none}.library .library-tabs>button{font-size:11.5px;padding:7px 2px;gap:3px}.library .library-tabs span{padding:0 4px;font-size:10.5px}.composition-switches .comp-chip{font-size:11.5px}.library .human-preset-card small{display:none}.pose-art{height:72px}}

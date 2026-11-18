@@ -1,5 +1,5 @@
-import {defaultHuman} from './human.js?v=6';
-import {emptyLinks,LINK_NAMES} from './attachments.js?v=6';
+import {defaultHuman} from './human.js?v=8';
+import {emptyLinks,LINK_NAMES} from './attachments.js?v=8';
 export const DEFAULT_SETTINGS=Object.freeze({ratio:'3:4',resolution:2048,background:'white',shadow:true,grid:false,material:'clay',light:100,focal:70,projection:'perspective',floorEnabled:false,floorExport:true,floorGrid:true,floorWidth:120,floorLength:240,floorY:-.5});
 const vec=(v,len,max=100)=>Array.isArray(v)&&v.length===len&&v.every(n=>Number.isFinite(n)&&Math.abs(n)<=max);
 const quat=v=>vec(v,4,1.01)&&Math.abs(v.reduce((s,n)=>s+n*n,0)-1)<.02;
@@ -20,13 +20,14 @@ export function validateScene(d){
   if(d.version===2){
     const h=d.human,st=h?.state;if(!h||!bool(h.visible)||!bool(h.initialized)||!vec(h.position,3,100)||!quat(h.quaternion)||!st||!Number.isFinite(st.height)||st.height<100||st.height>210)throw Error('Некорректный манекен');
     for(const k of ['pelvis','pelvisRot','torso','head'])if(!vec(st[k],3,k==='pelvis'?100:3600))throw Error('Некорректная поза');
+    if('neck' in st&&!vec(st.neck,3,3600))throw Error('Некорректная поза');
     for(const k of Object.keys(defaultHuman().targets)){if(!vec(st.targets?.[k],3,100)||!vec(st.rotations?.[k],3,3600)||!Number.isFinite(st.swivel?.[k])||Math.abs(st.swivel[k])>180)throw Error('Некорректное положение сустава');}
     if(!Array.isArray(d.links)||d.links.length!==4)throw Error('Некорректные привязки');
     for(const l of d.links)if(!l||!Object.hasOwn(LINK_NAMES,l.target)||!vec(l.position,3,100)||!quat(l.quaternion)||!bool(l.tipGround)||![null,'handle','shaft'].includes(l.anchor))throw Error('Некорректная привязка');
   }
   return true;
 }
-export function upgradeScene(d){validateScene(d);const result=structuredClone(d);result.settings={...DEFAULT_SETTINGS,...result.settings};if(result.version===1){result.version=2;result.human={visible:false,initialized:false,position:[0,0,0],quaternion:[0,0,0,1],state:defaultHuman()};result.links=emptyLinks();}return result;}
+export function upgradeScene(d){validateScene(d);const result=structuredClone(d);result.settings={...DEFAULT_SETTINGS,...result.settings};if(result.version===1){result.version=2;result.human={visible:false,initialized:false,position:[0,0,0],quaternion:[0,0,0,1],state:defaultHuman()};result.links=emptyLinks();}else if(result.human?.state&&!('neck' in result.human.state)){result.human.state.neck=result.human.state.head?[...result.human.state.head]:[0,0,0];result.human.state.head=[0,0,0];}return result;}
 export function unpackFile(d){
   if(d?.format==='ski-form-library'&&d.version===1&&Array.isArray(d.presets)&&d.presets.length>0&&d.presets.length<=500)return {library:true,entries:d.presets.map(e=>({name:cleanName(e.name),scene:upgradeScene(e.scene)}))};
   if(d?.format==='ski-form-scene'&&d.version===1)return {library:false,entries:[{name:cleanName(d.name||d.scene?.label),scene:upgradeScene(d.scene)}]};

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {HumanRig,solveTwoBone} from '../dist/human.js';
+import {HumanRig,solveTwoBone,defaultHuman} from '../dist/human.js';
 import {humanPose,HUMAN_POSES,placeGear,LIFESTYLE_LINKS} from '../dist/poses.js';
 import {AttachmentSystem,emptyLinks,worldTransform} from '../dist/attachments.js';
 import {defaults,createSki,createPole,replaceModel} from '../dist/model.js';
@@ -57,4 +57,42 @@ test('dragging elbow or knee along tangent translates joint along arrow and rota
     assert.ok(Math.abs(movement.length()-.05)<.005,`${part} moved ~5cm: ${movement.length()}`);
     assert.ok(angleErr<10,`${part} followed arrow direction: error ${angleErr}°`);
   }
+});
+test('neck joint rotation pivots neck and head from base of neck, and head rotates on neck',()=>{
+  const {human}=setup();
+  human.state=defaultHuman();
+  human.update();
+  const neckBaseBefore=human.controls.neck.position.clone();
+  const headPosBefore=human.parts.head.position.clone();
+  const neckMeshPosBefore=human.parts.neck.position.clone();
+
+  // Tilt neck forward 30 degrees
+  human.state.neck=[30,0,0];
+  human.update();
+
+  // Neck dot moves forward with the neck
+  assert.ok(human.controls.neck.position.z>neckBaseBefore.z+.01,'Neck dot moved forward with neck');
+
+  // Neck mesh and head swing forward in an arc from the neck base
+  assert.ok(human.parts.neck.position.z>neckMeshPosBefore.z+.01,'Neck mesh tilted forward');
+  assert.ok(human.parts.head.position.z>headPosBefore.z+.05,'Head moved forward along arc');
+  assert.ok(human.parts.head.position.y<headPosBefore.y-.01,'Head lowered along forward arc');
+
+  // Rotate head on neck to counter neck tilt
+  human.state.head=[-30,0,0];
+  human.update();
+  const headEuler=new THREE.Euler().setFromQuaternion(human.controls.head.quaternion,'XYZ');
+  close(headEuler.x,0,1e-3);
+
+  // Legacy scene migration
+  const legacyData={
+    version:2,config:{...defaults},settings:{...DEFAULT_SETTINGS},objects:[0,1,2,3].map(i=>({id:i,position:[0,0,0],quaternion:[0,0,0,1],visible:true})),
+    human:{visible:true,initialized:true,position:[0,0,0],quaternion:[0,0,0,1],state:{...defaultHuman()}},links:emptyLinks(),camera:{position:[2,2,3],quaternion:[0,0,0,1],target:[0,.8,0],zoom:1}
+  };
+  delete legacyData.human.state.neck;
+  legacyData.human.state.head=[15,-20,5];
+  assert.equal(validateScene(legacyData),true);
+  const upgraded=upgradeScene(legacyData);
+  assert.deepEqual(upgraded.human.state.neck,[15,-20,5]);
+  assert.deepEqual(upgraded.human.state.head,[0,0,0]);
 });

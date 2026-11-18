@@ -2,9 +2,9 @@ import * as THREE from 'three';
 
 const V=(a)=>new THREE.Vector3(...a),D=Math.PI/180;
 const Q=(a)=>new THREE.Quaternion().setFromEuler(new THREE.Euler(...a.map(n=>n*D),'XYZ'));
-export const CONTROL_NAMES={pelvis:'Таз',torso:'Корпус',head:'Голова',leftHand:'Левая кисть',rightHand:'Правая кисть',leftFoot:'Левая стопа',rightFoot:'Правая стопа',leftElbow:'Левый локоть',rightElbow:'Правый локоть',leftKnee:'Левое колено',rightKnee:'Правое колено'};
+export const CONTROL_NAMES={pelvis:'Таз',torso:'Корпус',neck:'Шея',head:'Голова',leftHand:'Левая кисть',rightHand:'Правая кисть',leftFoot:'Левая стопа',rightFoot:'Правая стопа',leftElbow:'Левый локоть',rightElbow:'Правый локоть',leftKnee:'Левое колено',rightKnee:'Правое колено'};
 export const TARGETS=['leftHand','rightHand','leftFoot','rightFoot'];
-export function defaultHuman(){return {height:175,pelvis:[0,.965,0],pelvisRot:[0,0,0],torso:[0,0,0],head:[0,0,0],targets:{leftHand:[.25,1.08,.24],rightHand:[-.25,1.08,.24],leftFoot:[.115,.035,.13],rightFoot:[-.115,.035,.13]},rotations:{leftHand:[0,0,0],rightHand:[0,0,0],leftFoot:[0,0,0],rightFoot:[0,0,0]},swivel:{leftHand:-12,rightHand:12,leftFoot:0,rightFoot:0}};}
+export function defaultHuman(){return {height:175,pelvis:[0,.965,0],pelvisRot:[0,0,0],torso:[0,0,0],neck:[0,0,0],head:[0,0,0],targets:{leftHand:[.25,1.08,.24],rightHand:[-.25,1.08,.24],leftFoot:[.115,.035,.13],rightFoot:[-.115,.035,.13]},rotations:{leftHand:[0,0,0],rightHand:[0,0,0],leftFoot:[0,0,0],rightFoot:[0,0,0]},swivel:{leftHand:-12,rightHand:12,leftFoot:0,rightFoot:0}};}
 
 export function solveTwoBone(start,target,a,b,preferred,swivel=0){
   const delta=target.clone().sub(start),requested=delta.length(),axis=requested>1e-7?delta.multiplyScalar(1/requested):new THREE.Vector3(0,-1,0);
@@ -42,12 +42,12 @@ export class HumanRig extends THREE.Group {
     this.parts={};this.controls={};this.frames={};this.limbs={};this.warnings=[];
     const labels=['pelvis','waist','chest','girdle','neck','head','nose','leftThumb','rightThumb','leftSole','rightSole','leftCuff','rightCuff','leftShoulder','rightShoulder','leftHip','rightHip','leftElbow','rightElbow','leftKnee','rightKnee','leftHand','rightHand','leftFoot','rightFoot'];
     const side=name=>name.startsWith('left')?'left':'right';
-    for(const name of labels){const mat=/Foot|Sole|Cuff|Hand|Thumb/.test(name)?this.materials.boot:/Elbow|Knee|Shoulder|Hip|neck/.test(name)?this.materials.joint:this.materials.body;const m=new THREE.Mesh(this.sphere,mat);m.castShadow=true;m.receiveShadow=true;m.userData.control=['chest','waist','girdle'].includes(name)?'torso':['nose','neck'].includes(name)?'head':name.endsWith('Shoulder')||name.endsWith('Thumb')?side(name)+'Hand':name.endsWith('Sole')||name.endsWith('Cuff')?side(name)+'Foot':name.endsWith('Hip')?'pelvis':name;this.body.add(m);this.parts[name]=m;}
+    for(const name of labels){const mat=/Foot|Sole|Cuff|Hand|Thumb/.test(name)?this.materials.boot:/Elbow|Knee|Shoulder|Hip|neck/.test(name)?this.materials.joint:this.materials.body;const m=new THREE.Mesh(this.sphere,mat);m.castShadow=true;m.receiveShadow=true;m.userData.control=['chest','waist','girdle'].includes(name)?'torso':name==='neck'?'neck':['nose','head'].includes(name)?'head':name.endsWith('Shoulder')||name.endsWith('Thumb')?side(name)+'Hand':name.endsWith('Sole')||name.endsWith('Cuff')?side(name)+'Foot':name.endsWith('Hip')?'pelvis':name;this.body.add(m);this.parts[name]=m;}
     // Small overlapping details self-shadow into jagged seams; they only receive light.
     for(const name of ['nose','leftThumb','rightThumb'])this.parts[name].castShadow=false;
     for(const name of ['leftUpperArm','leftForearm','rightUpperArm','rightForearm','leftThigh','leftShin','rightThigh','rightShin']){const m=new THREE.Mesh(this.limbShapes[name.replace(/^(left|right)/,'')],this.materials.body);m.castShadow=true;m.receiveShadow=true;m.userData.control=name.includes('Arm')||name.includes('Forearm')?name.startsWith('left')?'leftHand':'rightHand':name.startsWith('left')?'leftFoot':'rightFoot';this.body.add(m);this.parts[name]=m;}
-    const colors={pelvis:0xd39836,torso:0xd39836,head:0xd39836,leftHand:0x3d83c6,rightHand:0x3d83c6,leftFoot:0x789344,rightFoot:0x789344,leftElbow:0x969fa8,rightElbow:0x969fa8,leftKnee:0x969fa8,rightKnee:0x969fa8};
-    for(const key of Object.keys(CONTROL_NAMES)){const c=new THREE.Group();c.name=CONTROL_NAMES[key];c.userData.control=key;const dot=new THREE.Mesh(new THREE.SphereGeometry(.018,12,8),new THREE.MeshBasicMaterial({color:colors[key],depthTest:false,transparent:true,opacity:.9}));dot.renderOrder=10;dot.userData.control=key;c.add(dot);this.helpers.add(c);this.controls[key]=c;}
+    const colors={pelvis:0xd39836,torso:0xd39836,neck:0xd39836,head:0xd39836,leftHand:0x3d83c6,rightHand:0x3d83c6,leftFoot:0x789344,rightFoot:0x789344,leftElbow:0x969fa8,rightElbow:0x969fa8,leftKnee:0x969fa8,rightKnee:0x969fa8};
+    for(const key of Object.keys(CONTROL_NAMES)){const c=new THREE.Group();c.name=CONTROL_NAMES[key];c.userData.control=key;const dot=new THREE.Mesh(new THREE.SphereGeometry(.018,12,8),new THREE.MeshBasicMaterial({color:colors[key],depthTest:false,transparent:true,opacity:.9}));dot.renderOrder=10;dot.userData.control=key;c.add(dot);const hitBox=new THREE.Mesh(new THREE.SphereGeometry(.032,8,6),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthTest:false}));hitBox.userData.control=key;c.add(hitBox);this.helpers.add(c);this.controls[key]=c;}
     this.update();
   }
   setTone(tone){const palette=tone==='white'?['#e4e3de','#e4e3de','#73767a']:tone==='graphite'?['#6d7074','#6d7074','#2f3236']:['#b3b1ab','#b3b1ab','#4a4d50'];Object.values(this.materials).forEach((m,i)=>m.color.set(palette[i]));}
@@ -56,15 +56,22 @@ export class HumanRig extends THREE.Group {
   target(key){const p=V(this.state.targets[key]),s=this.state.height/175;p.x*=s;p.z*=s;if(!key.includes('Foot'))p.y*=s;return p;}
   setTarget(key,p){const s=this.state.height/175;this.state.targets[key]=[p.x/s,key.includes('Foot')?p.y:p.y/s,p.z/s];}
   update(){
-    const st=this.state,s=st.height/175,pelvis=V(st.pelvis).multiplyScalar(s),pq=Q(st.pelvisRot),tq=pq.clone().multiply(Q(st.torso)),hq=tq.clone().multiply(Q(st.head));this.warnings=[];
+    const st=this.state;if(!('neck' in st)){st.neck=st.head?[...st.head]:[0,0,0];st.head=[0,0,0];}
+    const s=st.height/175,pelvis=V(st.pelvis).multiplyScalar(s),pq=Q(st.pelvisRot),tq=pq.clone().multiply(Q(st.torso)),nq=tq.clone().multiply(Q(st.neck||[0,0,0])),hq=nq.clone().multiply(Q(st.head||[0,0,0]));this.warnings=[];
     const offset=(x,y,z,q=tq)=>new THREE.Vector3(x*s,y*s,z*s).applyQuaternion(q).add(pelvis);
     this.blob('pelvis',offset(0,.015,0,pq),[.16*s,.115*s,.105*s],pq);
     this.blob('waist',offset(0,.165,.004),[.13*s,.175*s,.095*s],tq);
     this.blob('chest',offset(0,.31,.006),[.17*s,.19*s,.112*s],tq);
     this.blob('girdle',offset(0,.425,-.012),[.175*s,.062*s,.085*s],tq);
-    this.blob('neck',offset(0,.5,-.004),[.056*s,.085*s,.054*s],tq);
-    const head=offset(0,.655,0);this.blob('head',head,[.079*s,.112*s,.097*s],hq);this.blob('nose',head.clone().add(new THREE.Vector3(0,-.014*s,.095*s).applyQuaternion(hq)),[.01*s,.019*s,.016*s],hq);
-    this.controls.pelvis.position.copy(pelvis);this.controls.pelvis.quaternion.copy(pq);this.controls.torso.position.copy(offset(0,.26,0));this.controls.torso.quaternion.copy(tq);this.controls.head.position.copy(head);this.controls.head.quaternion.copy(hq);
+    const neckBase=offset(0,.45,-.008);
+    const neckCenter=neckBase.clone().add(new THREE.Vector3(0,.05*s,.004*s).applyQuaternion(nq));
+    this.blob('neck',neckCenter,[.056*s,.085*s,.054*s],nq);
+    const headJoint=neckBase.clone().add(new THREE.Vector3(0,.11*s,.006*s).applyQuaternion(nq));
+    const headCenter=headJoint.clone().add(new THREE.Vector3(0,.095*s,.002*s).applyQuaternion(hq));
+    this.blob('head',headCenter,[.079*s,.112*s,.097*s],hq);this.blob('nose',headCenter.clone().add(new THREE.Vector3(0,-.014*s,.095*s).applyQuaternion(hq)),[.01*s,.019*s,.016*s],hq);
+    this.controls.pelvis.position.copy(pelvis);this.controls.pelvis.quaternion.copy(pq);this.controls.torso.position.copy(offset(0,.26,0));this.controls.torso.quaternion.copy(tq);
+    if(this.controls.neck){this.controls.neck.position.copy(neckCenter);this.controls.neck.quaternion.copy(nq);}
+    if(this.controls.head){this.controls.head.position.copy(headJoint);this.controls.head.quaternion.copy(hq);}
     for(const side of ['left','right']){
       const sign=side==='left'?1:-1,handKey=side+'Hand',footKey=side+'Foot',shoulder=offset(sign*.185,.405,0),hip=offset(sign*.095,0,0,pq);
       const hand=this.target(handKey),handQ=Q(st.rotations[handKey]),wrist=hand.clone().add(new THREE.Vector3(0,0,-.035*s).applyQuaternion(handQ));
@@ -91,9 +98,10 @@ export class HumanRig extends THREE.Group {
   applyControl(key,rotation=false){
     const node=this.controls[key],st=this.state,s=st.height/175;
     if(key==='pelvis'){st.pelvis=node.position.toArray().map(n=>n/s);st.pelvisRot=[node.rotation.x/D,node.rotation.y/D,node.rotation.z/D];}
-    else if(key==='torso'||key==='head'){
-      const base=key==='torso'?Q(st.pelvisRot):Q(st.pelvisRot).multiply(Q(st.torso));const local=base.invert().multiply(node.quaternion);const e=new THREE.Euler().setFromQuaternion(local);st[key]=[e.x/D,e.y/D,e.z/D];
-    }else if(TARGETS.includes(key)){this.setTarget(key,node.position);st.rotations[key]=[node.rotation.x/D,node.rotation.y/D,node.rotation.z/D];}
+    else if(key==='torso'){const base=Q(st.pelvisRot);const local=base.invert().multiply(node.quaternion);const e=new THREE.Euler().setFromQuaternion(local,'XYZ');st.torso=[e.x/D,e.y/D,e.z/D];}
+    else if(key==='neck'){const base=Q(st.pelvisRot).multiply(Q(st.torso));const local=base.invert().multiply(node.quaternion);const e=new THREE.Euler().setFromQuaternion(local,'XYZ');st.neck=[e.x/D,e.y/D,e.z/D];}
+    else if(key==='head'){const base=Q(st.pelvisRot).multiply(Q(st.torso)).multiply(Q(st.neck||[0,0,0]));const local=base.invert().multiply(node.quaternion);const e=new THREE.Euler().setFromQuaternion(local,'XYZ');st.head=[e.x/D,e.y/D,e.z/D];}
+    else if(TARGETS.includes(key)){this.setTarget(key,node.position);st.rotations[key]=[node.rotation.x/D,node.rotation.y/D,node.rotation.z/D];}
     else{
       const targetKey=key.replace('Elbow','Hand').replace('Knee','Foot'),limb=this.limbs[targetKey];
       const basis=limbBasis(limb.start,limb.target,limb.joint);
